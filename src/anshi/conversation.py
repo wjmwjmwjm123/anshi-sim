@@ -76,7 +76,7 @@ def draft_freeform(state: ConversationState, text: str, turn: int, candidates: l
         "text": clean,
         "turn": turn,
         "status": "待确认",
-        "candidates": candidates if candidates is not None else parse_decree(clean),
+        "candidates": candidates if candidates is not None else [],
     }
     state.next_decree_id += 1
     state.freeform_decrees.append(draft)
@@ -89,6 +89,16 @@ def confirm_decree(state: ConversationState, decree_id: int) -> dict:
         raise ValueError("未找到该诏书草案")
     decree["status"] = "已确认"
     return decree
+
+
+def promulgate_decrees(state: ConversationState, turn: int) -> list[dict]:
+    issued = []
+    for decree in state.freeform_decrees:
+        if decree.get("status") == "已确认":
+            decree["status"] = "已颁行"
+            decree["promulgated_turn"] = turn
+            issued.append(decree)
+    return issued
 
 
 def parse_decree(text: str) -> list[dict]:

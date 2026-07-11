@@ -54,6 +54,8 @@ def test_secret_edict_and_model_config_do_not_echo_key(tmp_path) -> None:
 def test_dialogue_decree_strategy_and_save_loop(tmp_path, monkeypatch) -> None:
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("LONGCAT_API_KEY", raising=False)
+    monkeypatch.setattr("apps.api.main.generate_decree_candidates", lambda text, targets: ([{"kind": "relief", "target": "changan", "amount": 30, "subject": "", "reason": "文书模型解析"}], True))
+    monkeypatch.setattr("apps.api.main.polish_document", lambda text: (f"奉天承运皇帝诏曰：{text}", True))
     app = create_app(tmp_path / "full-loop.db")
     with TestClient(app) as client:
         for topic in ("潼关应守还是战？", "朕答应事后酬功，请再陈利害", "军粮能支几日？"):
@@ -63,15 +65,22 @@ def test_dialogue_decree_strategy_and_save_loop(tmp_path, monkeypatch) -> None:
         assert len(snapshot["conversation"]["chats"]["gao_lishi"]) == 6
         assert snapshot["conversation"]["relationships"]["gao_lishi"]["promises"]
 
+        event = snapshot["progress"]["active_event"]
+        queued_choice = client.post("/api/events/choice", json={"choice": event["choices"][0]}).json()
+        assert queued_choice["accepted"]
+        assert client.get("/api/snapshot").json()["progress"]["total_turn"] == 1
+
         decree = client.post("/api/decrees/freeform", json={"text":"命户部开仓赈济长安，发粮三十，并查军报真伪。"}).json()["decree"]
+        assert decree["decision"]["choice"] == event["choices"][0]
+        assert decree["model_used"] and decree["parser_model_used"]
         confirmed = client.post(f"/api/decrees/{decree['id']}/confirm").json()
         assert confirmed["directives"]
         movement = client.post("/api/armies/move", json={"army_id":"tang_tongguan","destination":"lingbao"}).json()
         assert movement["movement"]["to"] == "lingbao"
 
-        event = snapshot["progress"]["active_event"]
-        resolved = client.post("/api/resolve", json={"event_choice":event["choices"][0]}).json()
+        resolved = client.post("/api/resolve", json={}).json()
         assert resolved["result"]["world_events"]
+        assert client.get("/api/snapshot").json()["conversation"]["freeform_decrees"][0]["status"] == "已颁行"
         slots = client.get("/api/saves").json()["slots"]
         assert any(slot["slot_id"] == 0 for slot in slots)
         client.post("/api/saves", json={"slot_id":2,"name":"测试存档"})

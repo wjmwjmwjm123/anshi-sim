@@ -17,7 +17,7 @@ from anshi.content import load_scenario
 from anshi.core import Order, apply_order
 from anshi.campaign import ACT_NAMES, add_secret_edict, advance as advance_campaign
 from anshi.ai import generate_character_reply, generate_decree_candidates, generate_turn_narration, generate_world_proposal, is_available, load_config, polish_document
-from anshi.conversation import ConversationState, confirm_decree, context_for, draft_freeform, record_exchange
+from anshi.conversation import ConversationState, confirm_decree, context_for, draft_freeform, promulgate_decrees, record_exchange
 from anshi.strategy import StrategyState, initial_strategy, move as move_army, simulate_month
 from anshi.strategy import FieldArmy, Siege
 from anshi.storage import management_from_payload, state_from_payload
@@ -65,6 +65,10 @@ class CouncilRequest(BaseModel):
 
 class ResolveRequest(BaseModel):
     event_choice: str = ""
+
+
+class EventChoiceRequest(BaseModel):
+    choice: str
 
 
 class SecretEdictRequest(BaseModel):
@@ -459,14 +463,32 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
     @app.post("/api/decrees/freeform")
     def freeform_decree(request: FreeformDecreeRequest) -> dict:
         with lock:
-            raw_candidates, parser_model_used = generate_decree_candidates(request.text, _decree_targets(management))
+            decision = progress.pending_event_choice if isinstance(progress.pending_event_choice, dict) else None
+            decision_text = ""
+            if decision:
+                decision_text = f"\n\n御前裁决：就《{decision['title']}》，裁定“{decision['choice']}”。"
+            source = request.text.strip() + decision_text
+            raw_candidates, parser_model_used = generate_decree_candidates(source, _decree_targets(management))
             candidates, rejected = _validate_decree_candidates(raw_candidates, management)
-            decree = draft_freeform(conversation, request.text, progress.total_turn, candidates if parser_model_used else None)
-            decree["rendered_text"], decree["model_used"] = polish_document(request.text)
+            decree = draft_freeform(conversation, request.text, progress.total_turn, candidates)
+            decree["rendered_text"], decree["model_used"] = polish_document(source)
             decree["parser_model_used"] = parser_model_used
             decree["rejected_candidates"] = rejected
+            decree["decision"] = decision
             store.save_conversation(conversation)
             return {"decree": decree}
+
+    @app.post("/api/events/choice")
+    def queue_event_choice(request: EventChoiceRequest) -> dict:
+        with lock:
+            event = progress.active_event
+            if not event:
+                return {"accepted": False, "detail": "当前没有待裁断的军国大事。"}
+            if request.choice not in event.choices:
+                return {"accepted": False, "detail": "该裁决不属于当前军国大事。"}
+            progress.pending_event_choice = {"event_id": event.id, "title": event.title, "choice": request.choice}
+            store.save_progress(progress)
+            return {"accepted": True, "pending_event_choice": progress.pending_event_choice}
 
     @app.post("/api/decrees/{decree_id}/confirm")
     def approve_freeform_decree(decree_id: int) -> dict:
@@ -504,14 +526,21 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
     @app.post("/api/resolve")
     def resolve_campaign_turn(request: ResolveRequest = ResolveRequest()) -> dict:
         with lock:
-            campaign_result = advance_campaign(progress, request.event_choice)
+            pending = progress.pending_event_choice if isinstance(progress.pending_event_choice, dict) else {}
+            event_choice = request.event_choice or pending.get("choice", "")
+            if progress.active_event and event_choice and event_choice not in progress.active_event.choices:
+                return {"accepted": False, "detail": "暂存裁决已失效，请重新裁断。"}
+            campaign_result = advance_campaign(progress, event_choice)
             if not campaign_result.get("advanced"):
                 return {"requires_choice": True, "event": campaign_result.get("event"), "progress": asdict(progress)}
+            progress.pending_event_choice = None
             result = resolve_management(management, progress.act).payload()
             result["world_events"].extend(simulate_month(strategy, progress.act, progress.total_turn))
             event_effects = _apply_event_choice(management, campaign_result.get("resolved"))
             result["world_events"].extend(event_effects)
             result["world_events"].extend(campaign_result.get("secret_updates", []))
+            issued = promulgate_decrees(conversation, progress.total_turn)
+            result["world_events"].extend(f"圣旨颁行：《{item.get('rendered_text') or item['text'][:24]}》" for item in issued)
             proposal_started = time.perf_counter()
             proposal, simulation_model_used = generate_world_proposal({
                 "turn": result,

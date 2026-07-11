@@ -22,6 +22,7 @@ class CampaignProgress:
     year: int = 756
     month: int = 6
     active_event: CampaignEvent | None = None
+    pending_event_choice: dict[str, str] | None = None
     completed_events: list[str] = field(default_factory=list)
     secret_edicts: list[dict] = field(default_factory=list)
     obligations: dict[str, int] = field(default_factory=lambda: {"回纥债务": 0, "藩镇自主": 20, "西陲空虚": 15, "战争疲敝": 28})

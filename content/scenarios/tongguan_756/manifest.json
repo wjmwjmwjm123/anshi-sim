@@ -1,0 +1,8 @@
+{
+  "scenario_id": "tongguan_756",
+  "title": "潼关危局",
+  "schema_version": 1,
+  "content_version": "0.5.0",
+  "start_date": "0756-06-01",
+  "calendar": "scenario_lunar_with_canonical_day_index"
+}

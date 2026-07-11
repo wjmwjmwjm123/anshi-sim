@@ -1,0 +1,4 @@
+[
+  {"id":"tang-tongguan","name":"潼关守军","power_id":"tang","commander_id":"geshu-han","region_id":"tongguan","paper_strength":200000,"present_strength":178000,"fit_strength":150000,"available_from":"0756-06-01","evidence_status":"disputed"},
+  {"id":"yan-lingbao","name":"崔乾佑前军","power_id":"yan","commander_id":"cui-qianyou","region_id":"shanjun","paper_strength":20000,"present_strength":18000,"fit_strength":17000,"available_from":"0756-06-01","evidence_status":"disputed"}
+]

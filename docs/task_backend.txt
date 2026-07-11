@@ -1,0 +1,7 @@
+Implement SQLite persistence for the current Anshi slice. Only edit:
+- src/anshi/storage.py
+- apps/api/main.py
+- tests/test_storage.py
+Use stdlib sqlite3 and JSON. Persist one campaign state and turn results under data/anshi.db,
+allow path override for tests, keep the current API contract, and make reset persistent.
+Use apply_patch. Do not edit core.py, frontend, content, or docs.

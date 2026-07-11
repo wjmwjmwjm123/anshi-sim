@@ -1,0 +1,7 @@
+[
+  {"id":"act1","title":"潼关危局","date_range":"756.06","objective":"保住关中门户与指挥链","entry_condition":"game_start","exit_condition":"tongguan_resolved"},
+  {"id":"act2","title":"皇统裂变","date_range":"756.06-756.12","objective":"处理长安、马嵬与灵武双中心","entry_condition":"capital_crisis","exit_condition":"court_succession_resolved"},
+  {"id":"act3","title":"收复两京","date_range":"757","objective":"在外援债务与民生代价间反攻","entry_condition":"suzong_court_active","exit_condition":"two_capitals_campaign_resolved"},
+  {"id":"act4","title":"胜而未定","date_range":"758-760","objective":"协调节度使并阻止叛军重组","entry_condition":"changan_recaptured","exit_condition":"shi_siming_rebellion_resolved"},
+  {"id":"act5","title":"平乱之后","date_range":"761-763","objective":"终结叛乱并处理河朔与边疆债务","entry_condition":"rebel_succession_crisis","exit_condition":"campaign_ending"}
+]

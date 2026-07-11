@@ -1,0 +1,8 @@
+Implement a small validated scenario content layer. Only edit:
+- content/scenarios/tongguan_756/*.json
+- src/anshi/content.py
+- tests/test_content.py
+Include manifest, 4 regions, 3 routes, 2 current armies, 8 core characters, 5 campaign acts,
+and explicit evidence/design status. Do not import dirty future armies. Use Pydantic already installed,
+validate unique IDs, references, route connectivity, time availability, and units. Use apply_patch.
+Do not edit API, core, frontend, or other docs.

@@ -1,0 +1,6 @@
+[
+  {"id":"changan","name":"长安","controller_id":"tang","terrain":["capital","plain"],"morale":50,"unrest":45,"evidence_status":"estimate"},
+  {"id":"tongguan","name":"潼关","controller_id":"tang","terrain":["fortress","pass"],"morale":65,"unrest":20,"evidence_status":"estimate"},
+  {"id":"lingbao","name":"灵宝西原","controller_id":"contested","terrain":["narrow_pass","riverbank","ambush"],"morale":40,"unrest":60,"evidence_status":"documented"},
+  {"id":"shanjun","name":"陕郡","controller_id":"yan","terrain":["city","hills"],"morale":35,"unrest":65,"evidence_status":"estimate"}
+]

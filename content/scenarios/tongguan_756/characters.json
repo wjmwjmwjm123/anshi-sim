@@ -1,0 +1,10 @@
+[
+  {"id":"xuanzong","name":"李隆基","role":"皇帝","power_id":"tang","region_id":"changan","available_from":"0756-06-01","evidence_status":"documented"},
+  {"id":"yang-guozhong","name":"杨国忠","role":"宰相","power_id":"tang","region_id":"changan","available_from":"0756-06-01","evidence_status":"documented"},
+  {"id":"gao-lishi","name":"高力士","role":"内侍","power_id":"tang","region_id":"changan","available_from":"0756-06-01","evidence_status":"documented"},
+  {"id":"li-heng","name":"李亨","role":"太子","power_id":"tang","region_id":"changan","available_from":"0756-06-01","evidence_status":"documented"},
+  {"id":"geshu-han","name":"哥舒翰","role":"潼关主帅","power_id":"tang","region_id":"tongguan","available_from":"0756-06-01","evidence_status":"documented"},
+  {"id":"wang-sili","name":"王思礼","role":"骑兵将领","power_id":"tang","region_id":"tongguan","available_from":"0756-06-01","evidence_status":"documented"},
+  {"id":"bian-lingcheng","name":"边令诚","role":"监军","power_id":"tang","region_id":"changan","available_from":"0756-06-01","evidence_status":"documented"},
+  {"id":"cui-qianyou","name":"崔乾佑","role":"燕军前敌主将","power_id":"yan","region_id":"shanjun","available_from":"0756-06-01","evidence_status":"documented"}
+]

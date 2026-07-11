@@ -1,0 +1,13 @@
+{
+  "metrics": {
+    "central_prestige": 45,
+    "military_power": 55,
+    "popular_support": 35,
+    "fiscal_health": 40,
+    "intel_confidence": 28,
+    "attention": 6
+  },
+  "crises": {"tongguan": 65, "court_conflict": 80, "false_intel": 90},
+  "evidence_status": "design",
+  "design_note": "Prototype values derived from the audited numerical specification; not historical measurements."
+}

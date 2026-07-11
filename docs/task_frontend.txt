@@ -1,0 +1,5 @@
+Expand the current React campaign dashboard. Only edit apps/web/src/main.tsx and styles.css.
+Keep the existing visual direction and API contract. Add a five-act campaign rail, recent history,
+court-opinion panel, persistent-save indicator, and a compact 'why this happened' result layout.
+Do not add dependencies or edit backend/package files. Preserve desktop/mobile layout and accessibility.
+Use apply_patch.

@@ -1,0 +1,5 @@
+[
+  {"id":"changan-tongguan","from_id":"changan","to_id":"tongguan","base_days":3,"capacity_glu_day":380000,"ambush_risk":10,"bidirectional":true},
+  {"id":"tongguan-lingbao","from_id":"tongguan","to_id":"lingbao","base_days":1,"capacity_glu_day":190000,"ambush_risk":95,"bidirectional":true},
+  {"id":"lingbao-shanjun","from_id":"lingbao","to_id":"shanjun","base_days":1,"capacity_glu_day":240000,"ambush_risk":70,"bidirectional":true}
+]

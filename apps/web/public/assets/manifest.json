@@ -1,19 +1,19 @@
 {
   "schema_version": 1,
   "provider": "ByteDance Ark Seedream",
-  "model": "doubao-seedream-5.0-lite",
-  "endpoint": "https://ark.cn-beijing.volces.com/api/plan/v3/images/generations",
+  "model": "doubao-seedream-5-0-260128",
+  "endpoint": "https://ark.cn-beijing.volces.com/api/v3/images/generations",
   "size": "1024x1024",
   "source_files": [
     "content/scenarios/tongguan_756/campaign.json",
     "content/scenarios/tongguan_756/characters_extra.json"
   ],
   "expected_counts": {
-    "portrait": 31,
+    "portrait": 42,
     "background": 5,
     "event": 18
   },
-  "updated_at": "2026-07-11T09:25:44.574606+00:00",
+  "updated_at": "2026-07-11T13:37:47.884662+00:00",
   "assets": [
     {
       "id": "background:act_1",
@@ -342,6 +342,18 @@
       "provider_request_id": ""
     },
     {
+      "id": "portrait:cui_huan",
+      "kind": "portrait",
+      "source_id": "cui_huan",
+      "file": "portraits/cui_huan.webp",
+      "prompt": "唐代安史之乱历史策略游戏美术，写实工笔与电影光影结合，考据唐代服饰、甲胄、建筑和器物，庄重克制，高细节，无现代物品，无文字，无水印。人物半身立绘：崔涣，黄门侍郎、同平章事。所属唐廷·肃宗，身处长安。人物立场：审覆诏令、调和新旧臣僚，避免仓促任命激化朝争。神情与仪态体现其身份与立场，中性暗色背景，人物完整不裁切，不使用现代影视明星面孔",
+      "status": "generated",
+      "bytes": 67076,
+      "sha256": "a617c3b0d4930f69d83a1ecb1c46ab2b5ef0e468252a74bed0e52a12a3e43a71",
+      "generated_at": "2026-07-11T13:36:12.027652+00:00",
+      "provider_request_id": ""
+    },
+    {
       "id": "portrait:cui_qianyou",
       "kind": "portrait",
       "source_id": "cui_qianyou",
@@ -354,6 +366,30 @@
       "provider_request_id": ""
     },
     {
+      "id": "portrait:cui_yuan",
+      "kind": "portrait",
+      "source_id": "cui_yuan",
+      "file": "portraits/cui_yuan.webp",
+      "prompt": "唐代安史之乱历史策略游戏美术，写实工笔与电影光影结合，考据唐代服饰、甲胄、建筑和器物，庄重克制，高细节，无现代物品，无文字，无水印。人物半身立绘：崔圆，工部尚书、剑南留后。所属唐廷·肃宗，身处剑南·成都。人物立场：修复驿道、仓城与河桥，以蜀中物资维持行在和反攻后勤。神情与仪态体现其身份与立场，中性暗色背景，人物完整不裁切，不使用现代影视明星面孔",
+      "status": "generated",
+      "bytes": 48860,
+      "sha256": "d6ac0bcdb7194dde74b61cee9827f236be6cb51d150da48549ba211cef20fcb4",
+      "generated_at": "2026-07-11T13:37:47.881046+00:00",
+      "provider_request_id": ""
+    },
+    {
+      "id": "portrait:diwu_qi",
+      "kind": "portrait",
+      "source_id": "diwu_qi",
+      "file": "portraits/diwu_qi.webp",
+      "prompt": "唐代安史之乱历史策略游戏美术，写实工笔与电影光影结合，考据唐代服饰、甲胄、建筑和器物，庄重克制，高细节，无现代物品，无文字，无水印。人物半身立绘：第五琦，户部侍郎、度支使。所属唐廷·肃宗，身处长安。人物立场：以盐铁、专卖和转运筹集军费，必要时接受严厉但高效的财政策略。神情与仪态体现其身份与立场，中性暗色背景，人物完整不裁切，不使用现代影视明星面孔",
+      "status": "generated",
+      "bytes": 52466,
+      "sha256": "b6349dcbd5d38285cdbf82c9bb22bed0bd58ab92cc5709b75d1c0af449c8870c",
+      "generated_at": "2026-07-11T13:36:36.451079+00:00",
+      "provider_request_id": ""
+    },
+    {
       "id": "portrait:du_hongjian",
       "kind": "portrait",
       "source_id": "du_hongjian",
@@ -362,6 +398,18 @@
       "status": "error",
       "error": "HTTP Error 400: Bad Request",
       "attempted_at": "2026-07-11T09:20:53.764690+00:00"
+    },
+    {
+      "id": "portrait:fang_guan",
+      "kind": "portrait",
+      "source_id": "fang_guan",
+      "file": "portraits/fang_guan.webp",
+      "prompt": "唐代安史之乱历史策略游戏美术，写实工笔与电影光影结合，考据唐代服饰、甲胄、建筑和器物，庄重克制，高细节，无现代物品，无文字，无水印。人物半身立绘：房琯，中书侍郎、同平章事。所属唐廷·肃宗，身处长安。人物立场：重建中枢名分与士人政治，但对用兵成算有时过于自信。神情与仪态体现其身份与立场，中性暗色背景，人物完整不裁切，不使用现代影视明星面孔",
+      "status": "generated",
+      "bytes": 83274,
+      "sha256": "6a6757598bc0890ddcf93ce68583c63951a32370934c915d88676257bc194f0f",
+      "generated_at": "2026-07-11T13:34:58.831333+00:00",
+      "provider_request_id": ""
     },
     {
       "id": "portrait:gao_lishi",
@@ -458,6 +506,42 @@
       "attempted_at": "2026-07-11T09:17:16.638689+00:00"
     },
     {
+      "id": "portrait:li_lin_minister",
+      "kind": "portrait",
+      "source_id": "li_lin_minister",
+      "file": "portraits/li_lin_minister.webp",
+      "prompt": "唐代安史之乱历史策略游戏美术，写实工笔与电影光影结合，考据唐代服饰、甲胄、建筑和器物，庄重克制，高细节，无现代物品，无文字，无水印。人物半身立绘：李麟，兵部尚书。所属唐廷·肃宗，身处长安。人物立场：统一诸道军籍、行军文书与调兵权限，避免节度使各自为战。神情与仪态体现其身份与立场，中性暗色背景，人物完整不裁切，不使用现代影视明星面孔",
+      "status": "generated",
+      "bytes": 66532,
+      "sha256": "f67fabcdfb034ff809c5fe82f4488fe5c2d47ca629b0fb80866c3f906e5f0b09",
+      "generated_at": "2026-07-11T13:37:10.646364+00:00",
+      "provider_request_id": ""
+    },
+    {
+      "id": "portrait:li_xian",
+      "kind": "portrait",
+      "source_id": "li_xian",
+      "file": "portraits/li_xian.webp",
+      "prompt": "唐代安史之乱历史策略游戏美术，写实工笔与电影光影结合，考据唐代服饰、甲胄、建筑和器物，庄重克制，高细节，无现代物品，无文字，无水印。人物半身立绘：李岘，刑部尚书。所属唐廷·肃宗，身处长安。人物立场：区分胁从与首恶，反对以战时肃反扩大株连，主张依法审理降官。神情与仪态体现其身份与立场，中性暗色背景，人物完整不裁切，不使用现代影视明星面孔",
+      "status": "generated",
+      "bytes": 49046,
+      "sha256": "c740ef20ce81b0e86313411249d7895746c4c424a432a1d44fae915637de2ba7",
+      "generated_at": "2026-07-11T13:37:25.501624+00:00",
+      "provider_request_id": ""
+    },
+    {
+      "id": "portrait:miao_jinqing",
+      "kind": "portrait",
+      "source_id": "miao_jinqing",
+      "file": "portraits/miao_jinqing.webp",
+      "prompt": "唐代安史之乱历史策略游戏美术，写实工笔与电影光影结合，考据唐代服饰、甲胄、建筑和器物，庄重克制，高细节，无现代物品，无文字，无水印。人物半身立绘：苗晋卿，尚书左仆射、同平章事。所属唐廷·肃宗，身处长安。人物立场：以稳健行政维持百司运转，避免新旧朝廷在制度上继续分裂。神情与仪态体现其身份与立场，中性暗色背景，人物完整不裁切，不使用现代影视明星面孔",
+      "status": "generated",
+      "bytes": 59324,
+      "sha256": "130bfe8e9d2ba7ef5a6eb84c83aa85724e5ee33c992bab7797d694a283e77c39",
+      "generated_at": "2026-07-11T13:35:30.040001+00:00",
+      "provider_request_id": ""
+    },
+    {
       "id": "portrait:nan_jiyun",
       "kind": "portrait",
       "source_id": "nan_jiyun",
@@ -467,6 +551,18 @@
       "bytes": 89182,
       "sha256": "1756d0cc2f107928f38c69eed114ae7e28fb1e5f20097b685107505576c09df5",
       "generated_at": "2026-07-11T09:21:23.036762+00:00",
+      "provider_request_id": ""
+    },
+    {
+      "id": "portrait:pei_mian",
+      "kind": "portrait",
+      "source_id": "pei_mian",
+      "file": "portraits/pei_mian.webp",
+      "prompt": "唐代安史之乱历史策略游戏美术，写实工笔与电影光影结合，考据唐代服饰、甲胄、建筑和器物，庄重克制，高细节，无现代物品，无文字，无水印。人物半身立绘：裴冕，尚书右仆射、同平章事。所属唐廷·肃宗，身处长安。人物立场：先筹钱粮与官爵稳住新朝，再议收复与裁抑功臣。神情与仪态体现其身份与立场，中性暗色背景，人物完整不裁切，不使用现代影视明星面孔",
+      "status": "generated",
+      "bytes": 75498,
+      "sha256": "3aabf61216952dcdfa5e1b71835792904334a1f68b0e1ec7d186dd5cda7f4766",
+      "generated_at": "2026-07-11T13:35:31.851335+00:00",
       "provider_request_id": ""
     },
     {
@@ -530,6 +626,30 @@
       "provider_request_id": ""
     },
     {
+      "id": "portrait:wei_jian_su",
+      "kind": "portrait",
+      "source_id": "wei_jian_su",
+      "file": "portraits/wei_jian_su.webp",
+      "prompt": "唐代安史之乱历史策略游戏美术，写实工笔与电影光影结合，考据唐代服饰、甲胄、建筑和器物，庄重克制，高细节，无现代物品，无文字，无水印。人物半身立绘：韦见素，门下侍郎、同平章事。所属唐廷·玄宗，身处长安。人物立场：主张维持政令程序，反对在军情未明时以中枢意气干预前线。神情与仪态体现其身份与立场，中性暗色背景，人物完整不裁切，不使用现代影视明星面孔",
+      "status": "generated",
+      "bytes": 58838,
+      "sha256": "f3fc717911e3942e99ac4968fc4bb6f01d69dc7725e9f3ad4aa7ececd4d7c40f",
+      "generated_at": "2026-07-11T13:34:54.808166+00:00",
+      "provider_request_id": ""
+    },
+    {
+      "id": "portrait:wei_zhi",
+      "kind": "portrait",
+      "source_id": "wei_zhi",
+      "file": "portraits/wei_zhi.webp",
+      "prompt": "唐代安史之乱历史策略游戏美术，写实工笔与电影光影结合，考据唐代服饰、甲胄、建筑和器物，庄重克制，高细节，无现代物品，无文字，无水印。人物半身立绘：韦陟，吏部尚书。所属唐廷·肃宗，身处长安。人物立场：整顿铨选、核实战乱中的遥授与冒官，反对以军功包揽州县。神情与仪态体现其身份与立场，中性暗色背景，人物完整不裁切，不使用现代影视明星面孔",
+      "status": "generated",
+      "bytes": 108638,
+      "sha256": "5f7abfd724f5fcda18a3919046a76fc959557b8ece7e1ce86e18a60d96572f00",
+      "generated_at": "2026-07-11T13:36:04.872680+00:00",
+      "provider_request_id": ""
+    },
+    {
       "id": "portrait:wu_chengen",
       "kind": "portrait",
       "source_id": "wu_chengen",
@@ -539,6 +659,18 @@
       "bytes": 79650,
       "sha256": "c8d03c793eede40c9951834ffc2034ca0c5f5fa890fb1e0f7db7866ad5367808",
       "generated_at": "2026-07-11T09:21:58.455566+00:00",
+      "provider_request_id": ""
+    },
+    {
+      "id": "portrait:xiao_hua",
+      "kind": "portrait",
+      "source_id": "xiao_hua",
+      "file": "portraits/xiao_hua.webp",
+      "prompt": "唐代安史之乱历史策略游戏美术，写实工笔与电影光影结合，考据唐代服饰、甲胄、建筑和器物，庄重克制，高细节，无现代物品，无文字，无水印。人物半身立绘：萧华，礼部尚书。所属唐廷·肃宗，身处长安。人物立场：以礼制、册命与外交文书确认新朝正统，慎重处理回纥名分。神情与仪态体现其身份与立场，中性暗色背景，人物完整不裁切，不使用现代影视明星面孔",
+      "status": "generated",
+      "bytes": 54750,
+      "sha256": "57311f41e7e2e615a5b2e34e341a0033c38063738d881b92c8d2ce7a2547d165",
+      "generated_at": "2026-07-11T13:36:45.398116+00:00",
       "provider_request_id": ""
     },
     {
@@ -651,8 +783,9 @@
     }
   ],
   "sizes": {
-    "portrait": "2048x2048",
-    "background": "2560x1440",
-    "event": "2560x1440"
-  }
+    "portrait": "2K",
+    "background": "2K",
+    "event": "2K"
+  },
+  "watermark": false
 }

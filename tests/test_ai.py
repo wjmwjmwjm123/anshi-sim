@@ -4,6 +4,7 @@ from unittest.mock import patch
 from anshi.ai import (
     LLMConfig,
     generate_character_reply,
+    generate_decree_candidates,
     generate_turn_narration,
     generate_world_proposal,
     load_config,
@@ -113,3 +114,13 @@ def test_world_proposal_extracts_structured_json() -> None:
     assert used is True
     assert proposal["assessment"] == "军心动摇"
     assert proposal["event_seeds"] == ["撤离争论"]
+
+
+def test_decree_candidates_extract_structured_actions() -> None:
+    config = LLMConfig("secret", "https://example.test/v1", "utility-model")
+    body = '{"candidates":[{"kind":"supply","target":"tang_tongguan","amount":30,"subject":"","reason":"转运军粮"}]}'
+    with patch("anshi.ai.urlopen", return_value=FakeResponse(body)):
+        candidates, used = generate_decree_candidates("向潼关转运军粮三十", {"armies": {"tang_tongguan": "潼关军"}}, config)
+
+    assert used is True
+    assert candidates[0]["target"] == "tang_tongguan"

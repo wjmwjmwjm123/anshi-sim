@@ -25,5 +25,5 @@ def test_complete_campaign_catalog_has_cross_act_content() -> None:
     assert len(catalog["acts"]) == 5
     assert sum(len(act["event_candidates"]) for act in catalog["acts"]) == 18
     extra = json.loads((root / "characters_extra.json").read_text(encoding="utf-8"))
-    assert len(extra) == 10
+    assert len(extra) == 21
     assert all(character["public_stance"] and character["available_from"] for character in extra)

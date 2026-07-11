@@ -14,3 +14,10 @@ def test_conversation_builds_memory_relationship_and_freeform_decree() -> None:
     decree = draft_freeform(state, "命户部开仓赈济长安，发粮三十，另查军报真伪。", 1)
     assert {item["kind"] for item in decree["candidates"]} == {"relief", "supply", "investigate"}
     assert confirm_decree(state, decree["id"])["status"] == "已确认"
+
+
+def test_freeform_decree_keeps_validated_model_candidates() -> None:
+    state = ConversationState()
+    candidates = [{"kind": "mediate", "target": "court_conflict", "amount": 20, "subject": "", "reason": "模型解析"}]
+    decree = draft_freeform(state, "召宰相与主帅当殿释疑，停止彼此攻讦。", 1, candidates)
+    assert decree["candidates"] == candidates

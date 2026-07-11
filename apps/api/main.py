@@ -16,7 +16,7 @@ from pydantic import BaseModel
 from anshi.content import load_scenario
 from anshi.core import Order, apply_order
 from anshi.campaign import ACT_NAMES, add_secret_edict, advance as advance_campaign
-from anshi.ai import generate_character_reply, generate_turn_narration, generate_world_proposal, is_available, load_config, polish_document
+from anshi.ai import generate_character_reply, generate_decree_candidates, generate_turn_narration, generate_world_proposal, is_available, load_config, polish_document
 from anshi.conversation import ConversationState, confirm_decree, context_for, draft_freeform, record_exchange
 from anshi.strategy import StrategyState, initial_strategy, move as move_army, simulate_month
 from anshi.strategy import FieldArmy, Siege
@@ -198,6 +198,40 @@ def _apply_event_choice(management, resolved: dict | None) -> list[str]:
                 management.regions[key].unrest += -8 if choice == "回师西陲" else 8
         effects.append("河西陇右边防随裁断变化")
     return effects
+
+
+_DIRECTIVE_DOMAINS = {
+    "relief": "regions", "tax": "regions", "fortify": "regions",
+    "supply": "armies", "mobilize": "armies",
+    "investigate": "issues", "mediate": "issues", "appoint": "characters",
+}
+
+
+def _decree_targets(management) -> dict[str, dict[str, str]]:
+    return {
+        domain: {key: getattr(value, "name", getattr(value, "title", key)) for key, value in getattr(management, domain).items()}
+        for domain in ("regions", "armies", "issues", "characters")
+    }
+
+
+def _validate_decree_candidates(raw: list[dict], management) -> tuple[list[dict], list[str]]:
+    valid, rejected = [], []
+    for item in raw[:12]:
+        if not isinstance(item, dict) or item.get("kind") not in _DIRECTIVE_DOMAINS:
+            rejected.append("未知诏令类型")
+            continue
+        kind, target = str(item["kind"]), str(item.get("target", ""))
+        domain = _DIRECTIVE_DOMAINS[kind]
+        if target not in getattr(management, domain):
+            rejected.append(f"{kind} 的目标 {target or '为空'} 不存在")
+            continue
+        try:
+            amount = max(1, min(100, int(round(float(item.get("amount", 10))))))
+        except (TypeError, ValueError):
+            rejected.append(f"{kind} 的投入规模无效")
+            continue
+        valid.append({"kind": kind, "target": target, "amount": amount, "subject": str(item.get("subject", ""))[:80], "reason": str(item.get("reason", "模型解析诏意"))[:160]})
+    return valid, rejected
 
 
 SCENE_KEYS = {"朝堂": "court", "密诏": "secret", "远奏": "remote", "court": "court", "secret": "secret", "remote": "remote"}
@@ -425,8 +459,12 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
     @app.post("/api/decrees/freeform")
     def freeform_decree(request: FreeformDecreeRequest) -> dict:
         with lock:
-            decree = draft_freeform(conversation, request.text, progress.total_turn)
+            raw_candidates, parser_model_used = generate_decree_candidates(request.text, _decree_targets(management))
+            candidates, rejected = _validate_decree_candidates(raw_candidates, management)
+            decree = draft_freeform(conversation, request.text, progress.total_turn, candidates if parser_model_used else None)
             decree["rendered_text"], decree["model_used"] = polish_document(request.text)
+            decree["parser_model_used"] = parser_model_used
+            decree["rejected_candidates"] = rejected
             store.save_conversation(conversation)
             return {"decree": decree}
 
@@ -434,11 +472,13 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
     def approve_freeform_decree(decree_id: int) -> dict:
         with lock:
             decree = confirm_decree(conversation, decree_id)
+            if not decree["candidates"]:
+                return {"decree": decree, "directives": [asdict(item) for item in management.directives], "accepted": False, "detail": "诏书尚未形成可执行事项，请修改后重拟。"}
             for candidate in decree["candidates"]:
                 draft_directive(management, candidate["kind"], candidate["target"], candidate["amount"], candidate.get("subject", ""))
             store.save_conversation(conversation)
             store.save_management(management)
-            return {"decree": decree, "directives": [asdict(item) for item in management.directives]}
+            return {"decree": decree, "directives": [asdict(item) for item in management.directives], "accepted": True}
 
     @app.post("/api/armies/move")
     def move_field_army(request: ArmyMoveRequest) -> dict:

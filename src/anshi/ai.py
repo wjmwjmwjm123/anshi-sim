@@ -154,6 +154,30 @@ def polish_document(text: str, config: LLMConfig | None = None) -> tuple[str, bo
         return source, False
 
 
+def generate_decree_candidates(text: str, targets: Mapping[str, object], config: LLMConfig | None = None) -> tuple[list[dict[str, object]], bool]:
+    cfg = config or load_config(role="utility")
+    if cfg is None:
+        return [], False
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "你是唐廷中书省的诏令结构化助手。把皇帝自由诏书拆成可执行事项，只输出JSON对象："
+                "{candidates:[{kind,target,amount,subject,reason}]}。kind只能是 relief、tax、supply、mobilize、"
+                "fortify、investigate、appoint、mediate；target必须从用户提供的对应目标ID中选择；amount为1到100。"
+                "不得发明目标，不得添加诏书中没有的命令。无法执行的句子不要强行映射。"
+            ),
+        },
+        {"role": "user", "content": "可用目标：" + _json_text(targets) + "\n诏书：" + text.strip()},
+    ]
+    try:
+        raw = chat_completion(messages, cfg, temperature=0.2)
+        start, end = raw.find("{"), raw.rfind("}")
+        payload = json.loads(raw[start : end + 1]) if start >= 0 and end > start else {}
+        candidates = payload.get("candidates", []) if isinstance(payload, dict) else []
+        return (candidates, True) if isinstance(candidates, list) else ([], False)
+    except (OSError, TimeoutError, KeyError, IndexError, TypeError, ValueError, RuntimeError, json.JSONDecodeError):
+        return [], False
 def generate_world_proposal(context: Mapping[str, object], config: LLMConfig | None = None) -> tuple[dict[str, object], bool]:
     cfg = config or load_config(role="simulation")
     empty = {"assessment": "", "proposals": [], "npc_actions": [], "event_seeds": []}

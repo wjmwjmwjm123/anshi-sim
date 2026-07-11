@@ -67,7 +67,7 @@ def remember(state: ConversationState, character_id: str, summary: str, scene: s
     state.memories[character_id] = sorted(items, key=lambda item: (item.importance, item.turn))[-20:]
 
 
-def draft_freeform(state: ConversationState, text: str, turn: int) -> dict:
+def draft_freeform(state: ConversationState, text: str, turn: int, candidates: list[dict] | None = None) -> dict:
     clean = text.strip()
     if len(clean) < 6:
         raise ValueError("诏书内容过短，必须写明对象与意图")
@@ -76,7 +76,7 @@ def draft_freeform(state: ConversationState, text: str, turn: int) -> dict:
         "text": clean,
         "turn": turn,
         "status": "待确认",
-        "candidates": parse_decree(clean),
+        "candidates": candidates if candidates is not None else parse_decree(clean),
     }
     state.next_decree_id += 1
     state.freeform_decrees.append(draft)

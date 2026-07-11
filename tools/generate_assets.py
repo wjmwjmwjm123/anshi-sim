@@ -37,8 +37,8 @@ class Asset:
 def load_assets() -> list[Asset]:
     campaign = _read_json(SCENARIO / "campaign.json")
     characters = [*campaign["characters"], *_read_json(SCENARIO / "characters_extra.json")]
-    if len(characters) != 31:
-        raise ValueError(f"expected 31 characters, found {len(characters)}")
+    if not characters:
+        raise ValueError("scenario contains no characters")
 
     regions = {item["id"]: item["name"] for item in campaign["regions"]}
     powers = {item["id"]: item["name"] for item in campaign["powers"]}
@@ -112,8 +112,7 @@ def normalize_image(raw: bytes, kind: str) -> bytes:
     from PIL import Image
 
     image = Image.open(BytesIO(raw)).convert("RGB")
-    # Seedream currently stamps the lower-right corner. Remove the whole footer,
-    # then restore the requested aspect ratio for predictable UI crops.
+    # The plan endpoint stamps its footer; remove it before the UI crop.
     footer = max(80, round(image.height * 0.075))
     image = image.crop((0, 0, image.width, image.height - footer))
     target = (1024, 1024) if kind == "portrait" else (1600, 900)

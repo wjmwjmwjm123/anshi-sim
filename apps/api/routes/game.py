@@ -11,12 +11,10 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from anshi.ai import generate_turn_narration, generate_world_proposal, load_config
-from anshi.agents import create_gazette_agent, run_agent, run_agent_stream
 from anshi.campaign import ACT_NAMES, advance as advance_campaign, CampaignEvent, CampaignProgress
 from anshi.conversation import ConversationState, promulgate_decrees
 from anshi.core import Order, apply_order
 from anshi.management import resolve as resolve_management
-from anshi.prompts import gazette_user
 from anshi.situations import advance_situations, policy_catalog, resolve_policy, select_policy
 from anshi.storage import management_from_payload, state_from_payload
 from anshi.strategy import FieldArmy, Siege, initial_strategy, resolve_movements, simulate_month
@@ -226,21 +224,9 @@ def register(router_: APIRouter, game) -> None:
             game.store.record_agent_run("回合推演", config.model if config else "中文模板", round((time.perf_counter() - started) * 1000), model_used)
             game.campaign["state"].history.insert(0, narration)
 
-            gazette_started = time.perf_counter()
-            gazette_agent = create_gazette_agent()
-            gazette_prompt = gazette_user({
-                "日期": f"{game.progress.year}年{game.progress.month}月", "章节": ACT_NAMES[game.progress.act],
-                "回合": game.progress.total_turn, "纪事": narration, "天下演化": result["world_events"][:15],
-                "推演判断": simulation.get("assessment", ""),
-                "推演影响": [f"{item['path']} {item['before']}→{item['after']}（{item['reason']}）" for item in simulation["accepted"][:8]],
-                "人物动向": [f"{item.get('actor', '未知')}：{item.get('intent', '')}" for item in simulation["npc_actions"] if isinstance(item, dict)][:5],
-                "局势": [f"{item.get('title','')} {item.get('status','')} {item.get('progress',0)}/100" if isinstance(item, dict) else f"{getattr(item,'title','')} {getattr(item,'status','')} {getattr(item,'progress',0)}/100" for item in game.progress.situations][:6],
-                "财务": {"现银": game.management.finance.cash, "粮储": game.management.finance.grain},
-            })
-            gazette_fallback = f"【邸报】{game.progress.year}年{game.progress.month}月，{ACT_NAMES[game.progress.act]}。{narration}"
-            gazette, gazette_model_used = run_agent(gazette_agent, gazette_prompt, fallback=gazette_fallback, with_status=True, tag="邸报")
-            if gazette_model_used:
-                game.store.record_agent_run("邸报", "文书模型", round((time.perf_counter() - gazette_started) * 1000), True)
+            gazette = simulation.pop("_gazette", "") or ""
+            if not gazette:
+                gazette = f"【邸报】{game.progress.year}年{game.progress.month}月，{ACT_NAMES[game.progress.act]}。{narration}"
             result["gazette"] = gazette
 
             game.store.record_turn("resolve", result)
@@ -308,17 +294,7 @@ def register(router_: APIRouter, game) -> None:
             game.store.record_agent_run("回合推演", config.model if config else "中文模板", round((time.perf_counter() - started) * 1000), model_used)
             game.campaign["state"].history.insert(0, narration)
 
-            # 构建邸报 prompt
-            gazette_agent = create_gazette_agent()
-            gazette_prompt = gazette_user({
-                "日期": f"{game.progress.year}年{game.progress.month}月", "章节": ACT_NAMES[game.progress.act],
-                "回合": game.progress.total_turn, "纪事": narration, "天下演化": result["world_events"][:15],
-                "推演判断": simulation.get("assessment", ""),
-                "推演影响": [f"{item['path']} {item['before']}→{item['after']}（{item['reason']}）" for item in simulation["accepted"][:8]],
-                "人物动向": [f"{item.get('actor', '未知')}：{item.get('intent', '')}" for item in simulation["npc_actions"] if isinstance(item, dict)][:5],
-                "局势": [f"{item.get('title','')} {item.get('status','')} {item.get('progress',0)}/100" if isinstance(item, dict) else f"{getattr(item,'title','')} {getattr(item,'status','')} {getattr(item,'progress',0)}/100" for item in game.progress.situations][:6],
-                "财务": {"现银": game.management.finance.cash, "粮储": game.management.finance.grain},
-            })
+            gazette = simulation.pop("_gazette", "") or ""
 
             # 保存快照（在流式输出之前）
             game.store.record_turn("resolve", result)
@@ -336,21 +312,20 @@ def register(router_: APIRouter, game) -> None:
                         "management": asdict(game.management)}
 
         # --- 流式输出（锁外） ---
+        # 邸报已从推演结果中提取，逐字模拟流式输出
+        if not gazette:
+            gazette = f"【邸报】{game.progress.year}年{game.progress.month}月，{ACT_NAMES[game.progress.act]}。{narration}"
+        snapshot["gazette"] = gazette
+
         def generate():
-            # 先发结算快照（不含邸报）
+            import time as _time
             yield f"data: {_json.dumps({'type': 'snapshot', 'data': snapshot}, ensure_ascii=False)}\n\n"
-            # 流式输出邸报
             yield f"data: {_json.dumps({'type': 'gazette_start'}, ensure_ascii=False)}\n\n"
-            gazette_buf = []
-            try:
-                for chunk in run_agent_stream(gazette_agent, gazette_prompt, tag="邸报"):
-                    gazette_buf.append(chunk)
-                    yield f"data: {_json.dumps({'type': 'gazette_delta', 'delta': chunk}, ensure_ascii=False)}\n\n"
-            except Exception:
-                pass
-            gazette = "".join(gazette_buf).strip()
-            if not gazette:
-                gazette = f"【邸报】{game.progress.year}年{game.progress.month}月，{ACT_NAMES[game.progress.act]}。{narration}"
+            # ponytail: 逐字输出已生成的邸报，每2字一批，间隔50ms
+            for i in range(0, len(gazette), 2):
+                chunk = gazette[i:i+2]
+                yield f"data: {_json.dumps({'type': 'gazette_delta', 'delta': chunk}, ensure_ascii=False)}\n\n"
+                _time.sleep(0.05)
             yield f"data: {_json.dumps({'type': 'gazette_end', 'gazette': gazette}, ensure_ascii=False)}\n\n"
             yield f"data: {_json.dumps({'done': True}, ensure_ascii=False)}\n\n"
 

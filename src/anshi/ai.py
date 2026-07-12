@@ -323,23 +323,34 @@ def generate_world_proposal(context: Mapping[str, object], config: LLMConfig | N
             "role": "system",
             "content": (
                 "你是历史策略游戏的受约束世界裁判。硬规则已经完成兵力、钱粮、路线和战斗结算。"
-                "你只提出软世界反应，不得改写硬结算。只输出一个JSON对象，不要代码围栏。"
+                "你只提出软世界反应，不得改写硬结算。\n\n"
+                "输出分两段，用换行分隔：\n"
+                "第一段：一个JSON对象，不要代码围栏。"
                 "格式：{assessment:string,proposals:[{path:string,operation:'add',value:number,reason:string,confidence:number}],"
                 "situations:[{id:string,delta:number,reason:string,confidence:number}],"
                 "npc_actions:[{actor:string,intent:string}],event_seeds:[string]}。"
                 "允许路径仅为 regions.<id>.support/unrest/fortification、armies.<id>.morale/supply、"
                 "issues.<id>.tension/progress、characters.<id>.loyalty。situations 的 id 必须来自当前上下文，"
-                "delta 只能表达本回合局势向好或恶化的方向，不得直接完成局势。每项变化应克制并有明确因果。"
+                "delta 只能表达本回合局势向好或恶化的方向，不得直接完成局势。每项变化应克制并有明确因果。\n\n"
+                "第二段：以 <<<邸报>>> 开头，写一篇邸报（200-350字）。文风仿《资治通鉴》叙事笔法，"
+                "以小说般的叙事开篇（场景、气氛、人物动作），用文言与白话相间的笔法，"
+                "涵盖诏令施行、军事动向、财政变化、民心态势，以因果叙事串联，结尾留一句余韵暗示天下走向。"
+                "不要修改任何数值，不要出现英文。"
             ),
         },
         {"role": "user", "content": "当前回合权威上下文：\n" + _json_text(context)},
     ]
     try:
         text = chat_completion(messages, cfg, temperature=0.45)
+        # 解析 JSON 部分
         start, end = text.find("{"), text.rfind("}")
         if start < 0 or end <= start:
             return empty, False
         payload = json.loads(text[start : end + 1])
+        # 解析邸报部分
+        gazette_marker = text.find("<<<邸报>>>")
+        if gazette_marker >= 0:
+            payload["_gazette"] = text[gazette_marker + len("<<<邸报>>>"):].strip()
         return (payload, True) if isinstance(payload, dict) else (empty, False)
     except (OSError, TimeoutError, KeyError, IndexError, TypeError, ValueError, RuntimeError, json.JSONDecodeError):
         return empty, False

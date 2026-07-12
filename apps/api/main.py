@@ -260,7 +260,25 @@ def _validate_decree_candidates(raw: list[dict], management) -> tuple[list[dict]
 SCENE_KEYS = {"朝堂": "court", "密诏": "secret", "远奏": "remote", "court": "court", "secret": "secret", "remote": "remote"}
 
 
+def _load_dotenv() -> None:
+    """从 .env 文件加载环境变量（不覆盖已有的）。"""
+    env_file = Path(__file__).resolve().parent.parent.parent / ".env"
+    if not env_file.exists():
+        return
+    for line in env_file.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
 def create_app(db_path: str | Path | None = None) -> FastAPI:
+    _load_dotenv()
+    # 默认 API 配置（用户可通过 .env 文件或环境变量覆盖）
+    os.environ.setdefault("OPENAI_BASE_URL", "https://api.xiaomimimo.com/v1")
+    os.environ.setdefault("OPENAI_MODEL", "mimo-v2.5")
+
     app = FastAPI(title="Anshi Sim", version="0.5.0")
     app.add_middleware(
         CORSMiddleware,

@@ -33,8 +33,8 @@ def test_longcat_fallback_config() -> None:
 
     assert config is not None
     assert config.api_key == "secret"
-    assert config.base_url == "https://api.longcat.chat/openai/v1"
-    assert config.model == "LongCat-2.0"
+    assert config.base_url == "https://api.xiaomimimo.com/v1"
+    assert config.model == "mimo-v2.5"
 
 
 def test_ark_global_config_can_back_all_model_roles() -> None:
@@ -58,7 +58,7 @@ def test_image_only_ark_key_does_not_hide_longcat_chat_config() -> None:
     config = load_config({"ARK_API_KEY": "image-secret", "LONGCAT_API_KEY": "chat-secret"})
     assert config is not None
     assert config.api_key == "chat-secret"
-    assert config.model == "LongCat-2.0"
+    assert config.model == "mimo-v2.5"
 
 
 def test_role_config_overrides_general_model() -> None:

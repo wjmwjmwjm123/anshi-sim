@@ -8,3 +8,4 @@ apps/web/.playwright-cli/
 *.log
 data/*.db*
 output/
+.env

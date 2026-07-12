@@ -76,8 +76,8 @@ def load_config(environ: Mapping[str, str] | None = None, role: str = "chat") ->
         base_url = role_base or env.get("OPENAI_BASE_URL", "").strip() or "https://api.openai.com/v1"
         model = role_model or env.get("OPENAI_MODEL", "").strip() or "gpt-4o-mini"
     else:
-        base_url = role_base or "https://api.longcat.chat/openai/v1"
-        model = role_model or "LongCat-2.0"
+        base_url = role_base or "https://api.xiaomimimo.com/v1"
+        model = role_model or "mimo-v2.5"
     adv_model = env.get("ADVANCED_MODEL", "").strip()
     adv_base = env.get("ADVANCED_BASE_URL", "").strip()
     adv_key = env.get("ADVANCED_API_KEY", "").strip()

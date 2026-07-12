@@ -4,10 +4,13 @@ from unittest.mock import patch
 from anshi.ai import (
     LLMConfig,
     generate_character_reply,
+    generate_council_minutes,
+    generate_council_speech,
     generate_decree_candidates,
     generate_turn_narration,
     generate_world_proposal,
     load_config,
+    parse_council_stance,
 )
 
 
@@ -148,3 +151,101 @@ def test_decree_candidates_extract_structured_actions() -> None:
 
     assert used is True
     assert candidates[0]["target"] == "tang_tongguan"
+
+
+def test_parse_council_stance_explicit_tag() -> None:
+    assert parse_council_stance("【态度：支持】臣以为可行") == "支持"
+    assert parse_council_stance("【态度：反对】此事不可") == "反对"
+    assert parse_council_stance("【态度：保留】尚须细察") == "保留"
+
+
+def test_parse_council_stance_heuristic_fallback() -> None:
+    assert parse_council_stance("臣以为当出击，宜速战") == "支持"
+    assert parse_council_stance("不可轻出，当固守慎重") == "反对"
+    assert parse_council_stance("此事难以判断") == "保留"
+
+
+def test_council_speech_fallback_without_config() -> None:
+    character = {"name": "哥舒翰", "public_stance": "应当固守潼关"}
+    with patch.dict("os.environ", {}, clear=True):
+        text = generate_council_speech(character, "是否出战？")
+    assert "哥舒翰" in text
+    assert "【态度：" in text
+
+
+def test_council_speech_uses_model() -> None:
+    config = LLMConfig("secret", "https://example.test/v1", "test-model")
+    character = {"name": "郭子仪", "identity": "朔方节度使", "public_stance": "先稳军心"}
+    captured = {}
+
+    def fake_open(request, timeout):
+        captured.update(json.loads(request.data))
+        return FakeResponse("【态度：支持】臣以为当出击，战机不可失。")
+
+    with patch("anshi.ai.urlopen", side_effect=fake_open):
+        text, used = generate_council_speech(character, "是否北伐", config=config, with_status=True)
+
+    assert used is True
+    assert "【态度：支持】" in text
+    assert "第二轮" not in captured["messages"][1]["content"]
+
+
+def test_council_speech_round2_includes_minutes_and_previous() -> None:
+    config = LLMConfig("secret", "https://example.test/v1", "test-model")
+    character = {"name": "李光弼", "identity": "河东节度使"}
+    captured = {}
+
+    def fake_open(request, timeout):
+        captured.update(json.loads(request.data))
+        return FakeResponse("【态度：反对】臣仍以为不可。")
+
+    with patch("anshi.ai.urlopen", side_effect=fake_open):
+        text, used = generate_council_speech(
+            character, "是否出战", config=config,
+            round_no=2, previous_speech="郭子仪：当出击", minutes="群臣意见不一", with_status=True,
+        )
+
+    assert used is True
+    content = captured["messages"][1]["content"]
+    assert "第二轮" in content
+    assert "郭子仪：当出击" in content
+    assert "群臣意见不一" in content
+
+
+def test_council_minutes_fallback_without_config() -> None:
+    speeches = [{"name": "哥舒翰", "reply": "当固守"}, {"name": "郭子仪", "reply": "当出击"}]
+    with patch.dict("os.environ", {}, clear=True):
+        text = generate_council_minutes("是否出战", speeches)
+    assert "哥舒翰" in text
+
+
+def test_council_minutes_uses_model() -> None:
+    config = LLMConfig("secret", "https://example.test/v1", "utility-model")
+    speeches = [{"name": "哥舒翰", "reply": "当固守"}, {"name": "郭子仪", "reply": "当出击"}]
+    captured = {}
+
+    def fake_open(request, timeout):
+        captured.update(json.loads(request.data))
+        return FakeResponse("群臣意见不一，哥舒翰主守，郭子仪主战，请陛下圣裁。")
+
+    with patch("anshi.ai.urlopen", side_effect=fake_open):
+        text, used = generate_council_minutes("是否出战", speeches, round_no=1, is_final=False, config=config, with_status=True)
+
+    assert used is True
+    assert "第1轮纪要" in captured["messages"][1]["content"]
+
+
+def test_council_minutes_final_includes_recommendation() -> None:
+    config = LLMConfig("secret", "https://example.test/v1", "utility-model")
+    speeches = [{"name": "哥舒翰", "reply": "当固守"}]
+    captured = {}
+
+    def fake_open(request, timeout):
+        captured.update(json.loads(request.data))
+        return FakeResponse("群臣倾向固守，请陛下定夺。")
+
+    with patch("anshi.ai.urlopen", side_effect=fake_open):
+        text, used = generate_council_minutes("是否出战", speeches, is_final=True, config=config, with_status=True)
+
+    assert used is True
+    assert "最终纪要" in captured["messages"][1]["content"]

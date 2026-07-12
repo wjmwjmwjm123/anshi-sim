@@ -16,7 +16,11 @@ from pydantic import BaseModel
 from anshi.content import load_scenario
 from anshi.core import Order, apply_order
 from anshi.campaign import ACT_NAMES, add_secret_edict, advance as advance_campaign
-from anshi.ai import generate_character_reply, generate_decree_candidates, generate_turn_narration, generate_world_proposal, load_config, polish_document
+from anshi.ai import (
+    generate_character_reply, generate_council_minutes, generate_council_speech,
+    generate_decree_candidates, generate_turn_narration, generate_world_proposal,
+    load_config, parse_council_stance, polish_document,
+)
 from anshi.conversation import ConversationState, confirm_decree, context_for, draft_freeform, promulgate_decrees, record_exchange
 from anshi.strategy import StrategyState, initial_strategy, queue_move as queue_army_move, resolve_movements, simulate_month
 from anshi.strategy import FieldArmy, Siege
@@ -62,6 +66,9 @@ class AudienceRequest(BaseModel):
 class CouncilRequest(BaseModel):
     character_ids: list[str]
     topic: str = "当前最紧要之事是什么？"
+    emperor_remark: str = ""
+    previous_minutes: str = ""
+    round_no: int = 1
 
 
 class ResolveRequest(BaseModel):
@@ -402,13 +409,25 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
         selected = [item for item in selected if management.characters.get(item["id"]) and management.characters[item["id"]].status == "active"]
         if len(selected) < 2:
             return {"accepted": False, "detail": "朝议至少需要两名当前可用人物。"}
-        exchanges = []
-        transcript = ""
+        world = {"章节": ACT_NAMES[progress.act], "年月": f"{progress.year}年{progress.month}月"}
+        exchanges, speeches, prev_speech = [], [], ""
         for character in selected:
-            reply, model_used = generate_character_reply(character, request.topic, "court", {"前臣发言": transcript, "章节": ACT_NAMES[progress.act], "年月": f"{progress.year}年{progress.month}月"}, with_status=True)
-            exchanges.append({"character_id": character["id"], "name": character["name"], "reply": reply, "model_used": model_used})
-            transcript += f"\n{character['name']}：{reply}"
-        return {"accepted": True, "topic": request.topic, "exchanges": exchanges}
+            char_ctx = context_for(conversation, character["id"])
+            reply, model_used = generate_council_speech(
+                character, request.topic, {**world, **char_ctx},
+                round_no=request.round_no,
+                previous_speech=prev_speech,
+                minutes=request.previous_minutes,
+                emperor_remark=request.emperor_remark,
+                with_status=True,
+            )
+            stance = parse_council_stance(reply)
+            exchanges.append({"character_id": character["id"], "name": character["name"], "reply": reply, "stance": stance, "model_used": model_used})
+            speeches.append({"name": character["name"], "reply": reply})
+            prev_speech = f"{character['name']}：{reply}"
+        is_final = request.round_no >= 2
+        minutes, _ = generate_council_minutes(request.topic, speeches, round_no=request.round_no, is_final=is_final)
+        return {"accepted": True, "topic": request.topic, "exchanges": exchanges, "minutes": minutes}
 
     def _classify_stance(text: str) -> str:
         text_lower = text.lower()
@@ -431,57 +450,36 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
                 yield f"data: {json.dumps({'error': '朝议至少需要两名当前可用人物。'}, ensure_ascii=False)}\n\n"
             return StreamingResponse(error_stream(), media_type="text/event-stream")
 
-        transcript = ""
-        first_round: list[dict] = []
+        world = {"章节": ACT_NAMES[progress.act], "年月": f"{progress.year}年{progress.month}月"}
+        round_no = request.round_no
 
         def generate():
-            nonlocal transcript
-            # 第一轮：群臣依次表态
+            speeches: list[dict] = []
+            prev_speech = ""
+
             for character in selected:
-                reply, model_used = generate_character_reply(
-                    character, request.topic, "court",
-                    {"前臣发言": transcript, "章节": ACT_NAMES[progress.act], "年月": f"{progress.year}年{progress.month}月"},
+                char_ctx = context_for(conversation, character["id"])
+                reply, model_used = generate_council_speech(
+                    character, request.topic, {**world, **char_ctx},
+                    round_no=round_no,
+                    previous_speech=prev_speech,
+                    minutes=request.previous_minutes,
+                    emperor_remark=request.emperor_remark,
                     with_status=True,
                 )
-                first_round.append({"character": character, "reply": reply, "stance": _classify_stance(reply)})
-                chunk = {"character_id": character["id"], "name": character["name"], "reply": reply, "model_used": model_used, "round": 1}
-                transcript += f"\n{character['name']}：{reply}"
-                yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
+                stance = parse_council_stance(reply)
+                speeches.append({"name": character["name"], "reply": reply})
+                prev_speech = f"{character['name']}：{reply}"
+                yield f"data: {json.dumps({'character_id': character['id'], 'name': character['name'], 'reply': reply, 'stance': stance, 'model_used': model_used, 'round': round_no}, ensure_ascii=False)}\n\n"
 
-            # 第二轮：主战与主守双方各再辩一句
-            defense_speaker = next((item for item in first_round if item["stance"] == "defense"), None)
-            attack_speaker = next((item for item in first_round if item["stance"] == "attack"), None)
+            is_final = round_no >= 2
+            minutes, _ = generate_council_minutes(
+                request.topic, speeches, round_no=round_no, is_final=is_final,
+            )
+            yield f"data: {json.dumps({'type': 'minutes', 'round': 'final' if is_final else round_no, 'text': minutes}, ensure_ascii=False)}\n\n"
 
-            if defense_speaker and attack_speaker:
-                yield f"data: {json.dumps({'round_marker': 2, 'label': '群臣再辩'}, ensure_ascii=False)}\n\n"
-
-                defense_character = defense_speaker["character"]
-                attack_character = attack_speaker["character"]
-
-                reply, model_used = generate_character_reply(
-                    defense_character, request.topic, "court",
-                    {
-                        "前臣发言": transcript,
-                        "再辩": f"{attack_character['name']}主战甚急，请直接驳其疏漏，限两句。",
-                        "章节": ACT_NAMES[progress.act],
-                        "年月": f"{progress.year}年{progress.month}月",
-                    },
-                    with_status=True,
-                )
-                transcript += f"\n{defense_character['name']}（再辩）：{reply}"
-                yield f"data: {json.dumps({'character_id': defense_character['id'], 'name': defense_character['name'], 'reply': reply, 'model_used': model_used, 'round': 2}, ensure_ascii=False)}\n\n"
-
-                reply, model_used = generate_character_reply(
-                    attack_character, request.topic, "court",
-                    {
-                        "前臣发言": transcript,
-                        "再辩": f"{defense_character['name']}主守再辩，请针锋相对回应，限两句。",
-                        "章节": ACT_NAMES[progress.act],
-                        "年月": f"{progress.year}年{progress.month}月",
-                    },
-                    with_status=True,
-                )
-                yield f"data: {json.dumps({'character_id': attack_character['id'], 'name': attack_character['name'], 'reply': reply, 'model_used': model_used, 'round': 2}, ensure_ascii=False)}\n\n"
+            if is_final:
+                yield f"data: {json.dumps({'type': 'emperor_options'}, ensure_ascii=False)}\n\n"
 
             yield f"data: {json.dumps({'done': True}, ensure_ascii=False)}\n\n"
 

@@ -261,3 +261,156 @@ def _turn_fallback(data: object) -> str:
     headline = data.get("headline", "本回合结算完毕")
     narrative = data.get("narrative", "结果已依既定规则写入实录。")
     return f"{headline}。{narrative}"
+
+
+CouncilStance = Literal["支持", "反对", "保留", "观望", "中立"]
+_STANCES: set[str] = {"支持", "反对", "保留", "观望", "中立"}
+
+
+def _council_stance_from_reply(reply: str) -> CouncilStance | None:
+    if not reply:
+        return None
+    head = reply[:30]
+    if head.startswith("【态度：") and "】" in head:
+        tag = head.split("】", 1)[0].replace("【态度：", "").strip()
+        if tag in _STANCES:
+            return tag  # type: ignore[return-value]
+    return None
+
+
+def parse_council_stance(reply: str) -> CouncilStance:
+    """Extract stance from a council reply, falling back to heuristic keywords."""
+    explicit = _council_stance_from_reply(reply)
+    if explicit:
+        return explicit
+    text = reply.lower()
+    support = sum(1 for w in ("可", "当", "宜", "应", "赞成", "支持", "可行", "出击", "进兵", "北伐") if w in text)
+    oppose = sum(1 for w in ("不可", "不宜", "反对", "暂缓", "守", "固守", "慎重", "再议") if w in text)
+    if support > oppose:
+        return "支持"
+    if oppose > support:
+        return "反对"
+    return "保留"
+
+
+def _council_speech_fallback(character: Mapping[str, object], topic: str, round_no: int) -> str:
+    name = str(character.get("name", "臣下"))
+    stance_text = str(character.get("public_stance") or character.get("stance") or "此事尚须细察")
+    if round_no == 2:
+        return f"【态度：保留】{name}再奏：臣反复思量，仍以为{stance_text}，还请陛下圣裁。"
+    return f"【态度：保留】{name}奏道：关于“{topic.strip() or '此事'}”，臣以为{stance_text}，请陛下与诸公共议。"
+
+
+def generate_council_speech(
+    character: Mapping[str, object],
+    topic: str,
+    context: Mapping[str, object] | None = None,
+    *,
+    round_no: int = 1,
+    previous_speech: str = "",
+    minutes: str = "",
+    emperor_remark: str = "",
+    config: LLMConfig | None = None,
+    with_status: bool = False,
+) -> str | tuple[str, bool]:
+    """Generate a minister's speech during a council session.
+
+    The model is asked to prefix its reply with a stance tag such as
+    【态度：支持】. The returned string always contains the tag; if parsing
+    fails the tag is injected from a heuristic fallback.
+    """
+    fallback = _council_speech_fallback(character, topic, round_no)
+    if config is None and load_config(role="chat") is None:
+        return (fallback, False) if with_status else fallback
+    name = str(character.get("name", "臣下"))
+    identity = str(character.get("identity") or character.get("office") or "大唐臣属")
+    stance = str(character.get("public_stance") or character.get("stance") or "未有定论")
+    facts = _json_text(context or {})
+    round_prompt = "这是第二轮交锋。请针对上一位大臣的最新发言和当前纪要，简短反驳或补充，限两句。" if round_no == 2 else "这是第一轮表态。请清楚陈述你对议题的立场，限两句。"
+    extra_parts: list[str] = []
+    if previous_speech:
+        extra_parts.append(f"上一位大臣最新发言：{previous_speech}")
+    if minutes:
+        extra_parts.append(f"当前会议纪要：{minutes}")
+    if emperor_remark:
+        extra_parts.append(f"陛下谕旨：{emperor_remark}")
+    extra = "\n".join(extra_parts)
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "你是大唐朝堂上参与廷议的大臣。你正在公开廷议中发言，需顾及君臣名分与在场诸臣。"
+                "你必须先用一句简短态度开头，格式严格为：【态度：支持】或【态度：反对】或【态度：保留】或【态度：观望】或【态度：中立】。"
+                "态度之后接你的正式发言。发言两至四句，不要输出JSON，不要替玩家下令，不要修改任何权威数值。"
+            ),
+        },
+        {
+            "role": "user",
+            "content": (
+                f"议题：{topic.strip() or '当前军国大事'}\n"
+                f"人物：{name}\n身份：{identity}\n公开立场：{stance}\n"
+                f"场景事实：{facts}\n"
+                f"{round_prompt}\n"
+                f"{extra}"
+            ),
+        },
+    ]
+    try:
+        text = chat_completion(messages, config or load_config(role="chat"), temperature=0.65)
+        if not _council_stance_from_reply(text):
+            stance_guess = parse_council_stance(text)
+            text = f"【态度：{stance_guess}】{text}"
+        return (text, True) if with_status else text
+    except (OSError, TimeoutError, KeyError, IndexError, TypeError, ValueError, RuntimeError, json.JSONDecodeError):
+        return (fallback, False) if with_status else fallback
+
+
+def _council_minutes_fallback(topic: str, speeches: list[dict[str, object]], is_final: bool) -> str:
+    if not speeches:
+        return "廷议尚未有发言。"
+    names = ", ".join(str(item.get("name", "臣下")) for item in speeches)
+    if is_final:
+        return f"关于“{topic}”，{names} 等人各陈己见，未能立决，请陛下圣裁。"
+    return f"关于“{topic}”，{names} 等人已初步表态，尚存分歧，请继续议。"
+
+
+def generate_council_minutes(
+    topic: str,
+    speeches: list[dict[str, object]],
+    *,
+    round_no: int = 1,
+    is_final: bool = False,
+    config: LLMConfig | None = None,
+    with_status: bool = False,
+) -> str | tuple[str, bool]:
+    """Generate council minutes from a list of minister speeches.
+
+    The minutes summarize positions, consensus, and disagreements. For the
+    final round, a concise recommendation is also included.
+    """
+    fallback = _council_minutes_fallback(topic, speeches, is_final)
+    if config is None and load_config(role="utility") is None:
+        return (fallback, False) if with_status else fallback
+    if not speeches:
+        return (fallback, False) if with_status else fallback
+    lines = [f"{item.get('name', '臣下')}：{item.get('reply', '')}" for item in speeches]
+    kind = "最终纪要" if is_final else f"第{round_no}轮纪要"
+    prompt = (
+        f"你是唐廷中书舍人，负责整理廷议{kind}。请根据以下大臣发言，用简体中文写一段简短纪要（不超过150字）：\n"
+        f"议题：{topic}\n"
+        "要求：\n"
+        "- 概括各方主要观点\n"
+        "- 指出共识与分歧\n"
+    )
+    if is_final:
+        prompt += "- 最后给出一句谏议，说明群臣倾向，请陛下如何裁决\n"
+    prompt += "\n大臣发言：\n" + "\n".join(lines)
+    messages = [
+        {"role": "system", "content": "你是唐廷中书舍人，只整理廷议纪要，不添加诏书中没有的命令，不修改任何权威数值。"},
+        {"role": "user", "content": prompt},
+    ]
+    try:
+        text = chat_completion(messages, config or load_config(role="utility"), temperature=0.4)
+        return (text, True) if with_status else text
+    except (OSError, TimeoutError, KeyError, IndexError, TypeError, ValueError, RuntimeError, json.JSONDecodeError):
+        return (fallback, False) if with_status else fallback

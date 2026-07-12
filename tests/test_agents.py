@@ -5,6 +5,8 @@ from anshi.ai import LLMConfig
 from anshi.agents import (
     CouncilAgent,
     create_character_agent,
+    create_court_script_agent,
+    create_gazette_agent,
     create_minister_agent,
     create_narrator_agent,
     create_secretary_agent,
@@ -12,8 +14,12 @@ from anshi.agents import (
     run_agent,
 )
 from anshi.prompts import (
+    COURT_SCRIPT_SYSTEM,
+    GAZETTE_SYSTEM,
     MINISTER_SYSTEM,
     SECRETARY_SYSTEM,
+    court_script_user,
+    gazette_user,
     minister_user,
     secretary_user,
 )
@@ -155,3 +161,45 @@ def test_for_role_fallback_when_no_advanced() -> None:
     from anshi.ai import for_role
     result = for_role(cfg, "simulator")
     assert result.model == "main-model"
+
+
+def test_court_script_agent_factory() -> None:
+    config = LLMConfig("key", "https://example.test/v1", "test-model")
+    agent = create_court_script_agent(config=config)
+    assert agent.name == "朝会编剧"
+    assert agent.role == "court_script"
+    assert agent.system_prompt == COURT_SCRIPT_SYSTEM
+
+
+def test_gazette_agent_factory() -> None:
+    config = LLMConfig("key", "https://example.test/v1", "test-model")
+    agent = create_gazette_agent(config=config)
+    assert agent.name == "邸报官"
+    assert agent.role == "gazette"
+    assert agent.system_prompt == GAZETTE_SYSTEM
+
+
+def test_court_script_user_prompt() -> None:
+    characters = [
+        {"name": "哥舒翰", "identity": "潼关主帅", "public_stance": "固守", "attributes": {"loyalty": 70, "administration": 60, "military": 80}},
+        {"name": "杨国忠", "identity": "宰相", "public_stance": "出击", "attributes": {"loyalty": 30, "administration": 70, "military": 20}},
+    ]
+    prompt = court_script_user("潼关应当固守还是出击", characters, {}, round_no=1)
+    assert "哥舒翰" in prompt
+    assert "杨国忠" in prompt
+    assert "第一轮表态" in prompt
+    assert "潼关" in prompt
+
+
+def test_court_script_user_prompt_round2() -> None:
+    characters = [{"name": "A", "identity": "臣", "public_stance": "守", "attributes": {"loyalty": 50, "administration": 50, "military": 50}}]
+    prompt = court_script_user("议题", characters, {}, round_no=2, previous_minutes="前轮纪要")
+    assert "第二轮交锋" in prompt
+    assert "前轮纪要" in prompt
+
+
+def test_gazette_user_prompt() -> None:
+    data = {"日期": "756年6月", "纪事": "潼关固守", "天下演化": ["事件1"], "财务": {"现银": 100}}
+    prompt = gazette_user(data)
+    assert "756年6月" in prompt
+    assert "潼关固守" in prompt

@@ -51,6 +51,59 @@ def minister_user(
     )
 
 
+# --- 廷议剧本（单次LLM调用，明朝模式） ---
+
+COURT_SCRIPT_SYSTEM = (
+    "你是历史策略游戏的朝会编剧。你将收到议题、在场大臣的画像（官职、派系、立场、能力），"
+    "请编排一整场廷议对话。规则：\n"
+    "1. 用 <<<臣:姓名>>> 分隔每位大臣的台词，例如 <<<臣:房玄龄>>>。\n"
+    "2. 每位大臣至少发言一次，核心争论者至少发言两次形成回嘴。\n"
+    "3. 发言顺序由你根据人物性格和利益安排——谁先发难、谁打断、谁补台、谁暗伤、谁逼皇帝裁断。\n"
+    "4. 每段台词两至四句，措辞庄重简练，符合唐代朝堂语境。\n"
+    "5. 不要输出旁白、分析、JSON或替皇帝写台词。\n"
+    "6. 只输出群臣台词，以 <<<臣:姓名>>> 分隔。"
+)
+
+
+def court_script_user(
+    topic: str,
+    characters: list[Mapping[str, object]],
+    context: Mapping[str, object],
+    *,
+    round_no: int = 1,
+    previous_minutes: str = "",
+    emperor_remark: str = "",
+) -> str:
+    """廷议剧本 prompt（单次调用生成整场对话）。"""
+    char_lines = []
+    for c in characters:
+        name = str(c.get("name", "臣下"))
+        identity = str(c.get("identity") or c.get("office") or "大唐臣属")
+        stance = str(c.get("public_stance") or c.get("stance") or "未有定论")
+        loyalty = c.get("attributes", {}).get("loyalty", "?") if isinstance(c.get("attributes"), dict) else "?"
+        ability = max(
+            c.get("attributes", {}).get("administration", 50) if isinstance(c.get("attributes"), dict) else 50,
+            c.get("attributes", {}).get("military", 50) if isinstance(c.get("attributes"), dict) else 50,
+        )
+        char_lines.append(f"- {name}｜{identity}｜立场：{stance}｜忠诚{loyalty}｜才具{ability}")
+    char_block = "\n".join(char_lines)
+    facts = _json_text(context)
+    parts = [
+        f"议题：{topic.strip() or '当前军国大事'}",
+        f"在场大臣（共{len(characters)}人）：\n{char_block}",
+        f"场景事实：{facts}",
+    ]
+    if round_no >= 2:
+        parts.append("这是第二轮交锋。大臣应针对第一轮纪要和分歧进行反驳或补充。")
+    else:
+        parts.append("这是第一轮表态。每位大臣亮明立场。")
+    if previous_minutes:
+        parts.append(f"前轮纪要：{previous_minutes}")
+    if emperor_remark:
+        parts.append(f"陛下谕旨：{emperor_remark}——群臣须围绕御旨展开。")
+    return "\n\n".join(parts)
+
+
 # --- 中书舍人纪要 ---
 
 SECRETARY_SYSTEM = "你是唐廷中书舍人，只整理廷议纪要，不添加诏书中没有的命令，不修改任何权威数值。"
@@ -76,6 +129,23 @@ def secretary_user(
         prompt += "- 最后给出一句谏议，说明群臣倾向，请陛下如何裁决\n"
     prompt += "\n大臣发言：\n" + "\n".join(lines)
     return prompt
+
+
+# --- 邸报 ---
+
+GAZETTE_SYSTEM = (
+    "你是唐代邸报撰写者。根据本回合结算的权威数据，写一篇简短邸报（150-250字），"
+    "向天下通报朝廷施政与天下大势。要求：\n"
+    "- 用文言与白话相间的笔法，庄重但不晦涩\n"
+    "- 涵盖：诏令施行、军事动向、财政变化、民心态势\n"
+    "- 不要修改任何数值，不要输出JSON\n"
+    "- 不要出现英文，全部用中文"
+)
+
+
+def gazette_user(data: Mapping[str, object]) -> str:
+    """邸报生成 prompt。"""
+    return "本回合权威结算数据（只读）：\n" + _json_text(data)
 
 
 # --- 人物奏对 ---

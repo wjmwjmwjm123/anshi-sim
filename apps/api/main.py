@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import json
+import re
 import time
 from dataclasses import asdict
 from pathlib import Path
@@ -22,9 +23,10 @@ from anshi.ai import (
     load_config, parse_council_stance, polish_document,
 )
 from anshi.agents import (
-    create_minister_agent, create_secretary_agent, run_agent, run_agent_stream,
+    create_minister_agent, create_secretary_agent, create_court_script_agent, create_gazette_agent,
+    run_agent, run_agent_stream,
 )
-from anshi.prompts import minister_user, secretary_user
+from anshi.prompts import minister_user, secretary_user, court_script_user, gazette_user
 from anshi import token_stats
 from anshi.conversation import ConversationState, confirm_decree, context_for, draft_freeform, promulgate_decrees, record_exchange
 from anshi.strategy import StrategyState, initial_strategy, queue_move as queue_army_move, resolve_movements, simulate_month
@@ -474,47 +476,141 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
 
         world = {"章节": ACT_NAMES[progress.act], "年月": f"{progress.year}年{progress.month}月"}
         round_no = request.round_no
+        is_final = round_no >= 2
+
+        # 构建上下文
+        char_contexts = []
+        for character in selected:
+            char_ctx = context_for(conversation, character["id"])
+            char_contexts.append({**world, **char_ctx})
+
+        # 构建人物列表（带完整画像）
+        characters_with_profile = []
+        for character in selected:
+            characters_with_profile.append({
+                **character,
+                "attributes": {
+                    "loyalty": management.characters.get(character["id"], {}).loyalty if hasattr(management.characters.get(character["id"], {}), 'loyalty') else 50,
+                    "administration": max(getattr(management.characters.get(character["id"], {}), 'ability', 50), 50),
+                    "military": 50,
+                },
+            })
 
         def generate():
+            # --- 单次LLM调用：生成整场廷议剧本 ---
+            script_agent = create_court_script_agent()
+            script_prompt = court_script_user(
+                request.topic, characters_with_profile, char_contexts[0] if char_contexts else {},
+                round_no=round_no, previous_minutes=request.previous_minutes,
+                emperor_remark=request.emperor_remark,
+            )
+
+            # 通知前端开始
+            yield f"data: {json.dumps({'type': 'council_start', 'topic': request.topic, 'round': round_no}, ensure_ascii=False)}\n\n"
+
+            # 流式输出，解析 <<<臣:XXX>>> 分隔符
+            delimiter_re = re.compile(r"<<<臣:([^>\n]+)>>>")
+            all_chunks: list[str] = []
+            pending_text = ""
+            current_speaker = ""
+            current_content: list[str] = []
             speeches: list[dict] = []
-            prev_speech = ""
+            allowed_names = {c["name"] for c in selected}
+            fallback_speaker = selected[0]["name"]
 
-            for character in selected:
-                char_ctx = context_for(conversation, character["id"])
-                ctx = {**world, **char_ctx}
-                agent = create_minister_agent(
-                    character, request.topic, ctx,
-                    round_no=round_no, previous_speech=prev_speech,
-                    minutes=request.previous_minutes, emperor_remark=request.emperor_remark,
-                )
-                user_prompt = minister_user(
-                    character, request.topic, ctx,
-                    round_no=round_no, previous_speech=prev_speech,
-                    minutes=request.previous_minutes, emperor_remark=request.emperor_remark,
-                )
-                # 通知前端此大臣开始发言
-                yield f"data: {json.dumps({'type': 'speech_start', 'character_id': character['id'], 'name': character['name'], 'round': round_no}, ensure_ascii=False)}\n\n"
-                # 真流式：逐字推送 LLM 输出
-                reply_buf = []
-                try:
-                    for chunk in run_agent_stream(agent, user_prompt, tag=f"廷议-{character['name']}"):
-                        reply_buf.append(chunk)
-                        yield f"data: {json.dumps({'type': 'speech_delta', 'character_id': character['id'], 'delta': chunk}, ensure_ascii=False)}\n\n"
-                except Exception:
-                    pass
-                reply = "".join(reply_buf).strip()
-                if not reply:
-                    reply = f"【态度：保留】{character.get('name', '臣下')}：此事尚须细察。"
-                if not parse_council_stance(reply):
-                    reply = f"【态度：保留】{reply}"
-                stance = parse_council_stance(reply)
-                speeches.append({"name": character["name"], "reply": reply})
-                prev_speech = f"{character['name']}：{reply}"
-                record_exchange(conversation, character["id"], request.topic, reply, "廷议", progress.total_turn)
-                # 发言结束，发完整 reply + stance
-                yield f"data: {json.dumps({'type': 'speech_end', 'character_id': character['id'], 'name': character['name'], 'reply': reply, 'stance': stance, 'round': round_no}, ensure_ascii=False)}\n\n"
+            def flush_speech():
+                nonlocal current_speaker, current_content
+                content = "".join(current_content).strip()
+                if current_speaker and content:
+                    speeches.append({"name": current_speaker, "reply": content})
+                    yield f"data: {json.dumps({'type': 'speech_end', 'name': current_speaker, 'reply': content, 'round': round_no}, ensure_ascii=False)}\n\n"
+                current_speaker = ""
+                current_content = []
 
-            is_final = round_no >= 2
+            def process_pending():
+                nonlocal pending_text, current_speaker, current_content
+                while pending_text:
+                    match = delimiter_re.search(pending_text)
+                    if match:
+                        # 输出分隔符前的文本
+                        before = pending_text[:match.start()]
+                        if before and current_speaker:
+                            current_content.append(before)
+                            yield f"data: {json.dumps({'type': 'speech_delta', 'name': current_speaker, 'delta': before}, ensure_ascii=False)}\n\n"
+                        # 切换发言人
+                        for item in flush_speech():
+                            yield item
+                        new_speaker = match.group(1).strip()
+                        current_speaker = new_speaker if new_speaker in allowed_names else fallback_speaker
+                        current_content = []
+                        yield f"data: {json.dumps({'type': 'speech_start', 'name': current_speaker, 'round': round_no}, ensure_ascii=False)}\n\n"
+                        pending_text = pending_text[match.end():]
+                        continue
+
+                        # 没有完整分隔符，保留最后的字符等待更多数据
+                    marker_start = pending_text.find("<<<臣:")
+                    if marker_start >= 0:
+                        if marker_start > 0:
+                            before = pending_text[:marker_start]
+                            if current_speaker:
+                                current_content.append(before)
+                                yield f"data: {json.dumps({'type': 'speech_delta', 'name': current_speaker, 'delta': before}, ensure_ascii=False)}\n\n"
+                            pending_text = pending_text[marker_start:]
+                            continue
+                        # 完整分隔符可能还没到，等待更多数据
+                        break
+
+                    # 没有分隔符，直接输出
+                    if current_speaker:
+                        current_content.append(pending_text)
+                        yield f"data: {json.dumps({'type': 'speech_delta', 'name': current_speaker, 'delta': pending_text}, ensure_ascii=False)}\n\n"
+                    pending_text = ""
+
+            # 流式调用 LLM
+            try:
+                for chunk in run_agent_stream(script_agent, script_prompt, tag="朝会编剧"):
+                    all_chunks.append(chunk)
+                    pending_text += chunk
+                    for item in process_pending():
+                        yield item
+            except Exception:
+                pass
+
+            # 处理剩余文本
+            pending_text += ""
+            for item in process_pending():
+                yield item
+            for item in flush_speech():
+                yield item
+
+            # 如果没有解析出任何发言，回退到每人单独调用
+            if not speeches:
+                for character in selected:
+                    char_ctx = context_for(conversation, character["id"])
+                    ctx = {**world, **char_ctx}
+                    agent = create_minister_agent(
+                        character, request.topic, ctx,
+                        round_no=round_no, previous_speech="",
+                        minutes=request.previous_minutes, emperor_remark=request.emperor_remark,
+                    )
+                    user_prompt = minister_user(
+                        character, request.topic, ctx,
+                        round_no=round_no, previous_speech="",
+                        minutes=request.previous_minutes, emperor_remark=request.emperor_remark,
+                    )
+                    fallback = f"【态度：保留】{character.get('name', '臣下')}：此事尚须细察。"
+                    reply, _ = run_agent(agent, user_prompt, fallback=fallback, with_status=True, tag=f"廷议-{character['name']}")
+                    speeches.append({"name": character["name"], "reply": reply})
+                    yield f"data: {json.dumps({'type': 'speech_start', 'name': character['name'], 'round': round_no}, ensure_ascii=False)}\n\n"
+                    yield f"data: {json.dumps({'type': 'speech_end', 'name': character['name'], 'reply': reply, 'round': round_no}, ensure_ascii=False)}\n\n"
+
+            # 记录对话
+            for speech in speeches:
+                character = next((c for c in selected if c["name"] == speech["name"]), None)
+                if character:
+                    record_exchange(conversation, character["id"], request.topic, speech["reply"], "廷议", progress.total_turn)
+
+            # --- 中书舍人纪要 ---
             sec_agent = create_secretary_agent(request.topic, speeches, round_no=round_no, is_final=is_final)
             sec_prompt = secretary_user(request.topic, speeches, round_no=round_no, is_final=is_final)
             topic_q = "“" + request.topic + "”"
@@ -524,9 +620,7 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
 
             store.save_conversation(conversation)
 
-            if is_final:
-                yield f"data: {json.dumps({'type': 'emperor_options'}, ensure_ascii=False)}\n\n"
-
+            yield f"data: {json.dumps({'type': 'emperor_options', 'is_final': is_final}, ensure_ascii=False)}\n\n"
             yield f"data: {json.dumps({'done': True}, ensure_ascii=False)}\n\n"
 
         return StreamingResponse(generate(), media_type="text/event-stream")
@@ -670,6 +764,28 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
             config = load_config(role="simulation")
             store.record_agent_run("回合推演", config.model if config else "中文模板", round((time.perf_counter() - started) * 1000), model_used)
             campaign["state"].history.insert(0, narration)
+
+            # --- 邸报生成 ---
+            gazette_started = time.perf_counter()
+            gazette_agent = create_gazette_agent()
+            gazette_prompt = gazette_user({
+                "日期": f"{progress.year}年{progress.month}月",
+                "章节": ACT_NAMES[progress.act],
+                "回合": progress.total_turn,
+                "纪事": narration,
+                "天下演化": result["world_events"][:15],
+                "推演判断": simulation.get("assessment", ""),
+                "推演影响": [f"{item['path']} {item['before']}→{item['after']}（{item['reason']}）" for item in simulation["accepted"][:8]],
+                "人物动向": [f"{item.get('actor', '未知')}：{item.get('intent', '')}" for item in simulation["npc_actions"] if isinstance(item, dict)][:5],
+                "局势": [f"{item.get('title','')} {item.get('status','')} {item.get('progress',0)}/100" if isinstance(item, dict) else f"{getattr(item,'title','')} {getattr(item,'status','')} {getattr(item,'progress',0)}/100" for item in progress.situations][:6],
+                "财务": {"现银": management.finance.cash, "粮储": management.finance.grain},
+            })
+            gazette_fallback = f"【邸报】{progress.year}年{progress.month}月，{ACT_NAMES[progress.act]}。{narration}"
+            gazette, gazette_model_used = run_agent(gazette_agent, gazette_prompt, fallback=gazette_fallback, with_status=True, tag="邸报")
+            if gazette_model_used:
+                store.record_agent_run("邸报", "文书模型", round((time.perf_counter() - gazette_started) * 1000), True)
+            result["gazette"] = gazette
+
             store.record_turn("resolve", result)
             store.save_management(management)
             store.save_progress(progress)
@@ -677,7 +793,7 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
             store.save_strategy(strategy)
             store.save(campaign["state"])
             store.save_slot(0, "自动存档", unified_payload())
-            return {"result": result, "narration": narration, "model_used": model_used, "simulation_model_used": simulation_model_used, "campaign_result": campaign_result, "progress": asdict(progress), "state": {**campaign["state"].payload(), "save_revision": store.revision()}, "management": asdict(management)}
+            return {"result": result, "narration": narration, "gazette": gazette, "model_used": model_used, "simulation_model_used": simulation_model_used, "campaign_result": campaign_result, "progress": asdict(progress), "state": {**campaign["state"].payload(), "save_revision": store.revision()}, "management": asdict(management)}
 
     @app.post("/api/turn")
     def turn(request: TurnRequest) -> dict:

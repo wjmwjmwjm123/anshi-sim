@@ -2,6 +2,17 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 
+REGION_NAMES = {
+    "changan": "长安", "tongguan": "潼关", "lingbao": "灵宝", "shanjun": "陕郡",
+    "luoyang": "洛阳", "hedong": "河东", "fanyang": "范阳", "changshan": "常山",
+    "pingyuan": "平原", "suiyang": "睢阳", "yangzhou": "扬州", "shuofang": "朔方",
+    "hexi": "河西", "longyou": "陇右", "jiannan": "剑南", "mawei": "马嵬",
+}
+
+
+def _cn(region_id: str) -> str:
+    return REGION_NAMES.get(region_id, region_id)
+
 
 @dataclass
 class FieldArmy:
@@ -67,8 +78,8 @@ def move(state: StrategyState, army_id: str, destination: str) -> dict:
     origin = army.region
     army.region = destination
     army.supply = max(0, army.supply - 5)
-    army.objective = f"进驻{destination}"
-    return {"army": army_id, "from": origin, "to": destination, "supply": -5}
+    army.objective = f"进驻{_cn(destination)}"
+    return {"army": army_id, "from": _cn(origin), "to": _cn(destination), "supply": -5}
 
 
 def queue_move(state: StrategyState, army_id: str, destination: str) -> dict:
@@ -93,7 +104,7 @@ def resolve_movements(state: StrategyState) -> list[str]:
         name = army.name if army else order.army_id
         try:
             result = move(state, order.army_id, order.destination)
-            events.append(f"{name}奉诏由{result['from']}调往{result['to']}，行军耗粮5")
+            events.append(f"{name}奉诏由{_cn(result['from'])}调往{_cn(result['to'])}，行军耗粮5")
         except ValueError as error:
             events.append(f"{name}调动军令未能执行：{error}")
     return events
@@ -113,7 +124,7 @@ def simulate_month(state: StrategyState, act: int, seed: int) -> list[str]:
             origin = army.region
             army.region = destination
             army.supply = max(0, army.supply - 4)
-            events.append(f"{army.name}由{origin}向{destination}推进")
+            events.append(f"{army.name}由{_cn(origin)}向{_cn(destination)}推进")
     events.extend(_resolve_battles(state, seed))
     events.extend(_resolve_sieges(state))
     state.battle_log = (events + state.battle_log)[:60]
@@ -148,7 +159,7 @@ def _resolve_battles(state: StrategyState, seed: int) -> list[str]:
         _spread_loss(tang, tang_loss)
         _spread_loss(yan, yan_loss)
         victor = "唐军" if tang_power + seed % 1000 >= yan_power else "燕军"
-        events.append(f"{region}发生会战：唐军损失{tang_loss}，燕军损失{yan_loss}，{victor}占优")
+        events.append(f"{_cn(region)}发生会战：唐军损失{tang_loss}，燕军损失{yan_loss}，{victor}占优")
     return events
 
 
@@ -160,9 +171,9 @@ def _resolve_sieges(state: StrategyState) -> list[str]:
         siege.progress = min(100, siege.progress + 15)
         if siege.progress >= 100:
             siege.status = "城破"
-            events.append(f"{siege.region}围城结束：守城体系崩溃")
+            events.append(f"{_cn(siege.region)}围城结束：守城体系崩溃")
         else:
-            events.append(f"{siege.region}围城进度达到{siege.progress}%")
+            events.append(f"{_cn(siege.region)}围城进度达到{siege.progress}%")
     return events
 
 

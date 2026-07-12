@@ -15,12 +15,16 @@ from typing import Callable, Generator, Mapping
 from anshi.ai import LLMConfig, chat_completion, for_role, load_config, sanitize_json, stream_chat_completion
 from anshi.prompts import (
     CHARACTER_SYSTEM,
+    COURT_SCRIPT_SYSTEM,
+    GAZETTE_SYSTEM,
     MINISTER_SYSTEM,
     NARRATOR_SYSTEM,
     SECRETARY_SYSTEM,
     WORLD_PROPOSAL_SYSTEM,
     SCENE_PROMPTS,
     character_user,
+    court_script_user,
+    gazette_user,
     minister_user,
     narrator_user,
     secretary_user,
@@ -123,6 +127,30 @@ def create_simulator_agent(config: LLMConfig | None = None) -> CouncilAgent:
         system_prompt=WORLD_PROPOSAL_SYSTEM,
         config=for_role(cfg, "simulator"),
         temperature=0.45,
+    )
+
+
+def create_court_script_agent(config: LLMConfig | None = None) -> CouncilAgent:
+    """廷议剧本 agent：一次调用生成整场廷议对话。"""
+    cfg = config or load_config(role="chat") or LLMConfig("", "", "")
+    return CouncilAgent(
+        name="朝会编剧",
+        role="court_script",
+        system_prompt=COURT_SCRIPT_SYSTEM,
+        config=for_role(cfg, "chat"),
+        temperature=0.75,
+    )
+
+
+def create_gazette_agent(config: LLMConfig | None = None) -> CouncilAgent:
+    """邸报 agent：生成回合邸报。"""
+    cfg = config or load_config(role="utility") or LLMConfig("", "", "")
+    return CouncilAgent(
+        name="邸报官",
+        role="gazette",
+        system_prompt=GAZETTE_SYSTEM,
+        config=for_role(cfg, "utility"),
+        temperature=0.4,
     )
 
 

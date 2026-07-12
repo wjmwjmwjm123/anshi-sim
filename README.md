@@ -133,6 +133,22 @@ JSON 提案]
 
 ## 快速启动
 
+### 一键启动（Windows PowerShell）
+
+首次运行会安装前后端依赖：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\start.ps1 -Install
+```
+
+之后直接运行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\start.ps1
+```
+
+脚本会启动 API、前端并打开 `http://127.0.0.1:5173`。加上 `-NoBrowser` 可只启动服务。
+
 ### 前置条件
 
 - Python 3.13+

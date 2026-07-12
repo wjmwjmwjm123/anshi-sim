@@ -425,8 +425,10 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
             exchanges.append({"character_id": character["id"], "name": character["name"], "reply": reply, "stance": stance, "model_used": model_used})
             speeches.append({"name": character["name"], "reply": reply})
             prev_speech = f"{character['name']}：{reply}"
+            record_exchange(conversation, character["id"], request.topic, reply, "廷议", progress.total_turn)
         is_final = request.round_no >= 2
         minutes, _ = generate_council_minutes(request.topic, speeches, round_no=request.round_no, is_final=is_final)
+        store.save_conversation(conversation)
         return {"accepted": True, "topic": request.topic, "exchanges": exchanges, "minutes": minutes}
 
     def _classify_stance(text: str) -> str:
@@ -470,6 +472,7 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
                 stance = parse_council_stance(reply)
                 speeches.append({"name": character["name"], "reply": reply})
                 prev_speech = f"{character['name']}：{reply}"
+                record_exchange(conversation, character["id"], request.topic, reply, "廷议", progress.total_turn)
                 yield f"data: {json.dumps({'character_id': character['id'], 'name': character['name'], 'reply': reply, 'stance': stance, 'model_used': model_used, 'round': round_no}, ensure_ascii=False)}\n\n"
 
             is_final = round_no >= 2
@@ -477,6 +480,8 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
                 request.topic, speeches, round_no=round_no, is_final=is_final,
             )
             yield f"data: {json.dumps({'type': 'minutes', 'round': 'final' if is_final else round_no, 'text': minutes}, ensure_ascii=False)}\n\n"
+
+            store.save_conversation(conversation)
 
             if is_final:
                 yield f"data: {json.dumps({'type': 'emperor_options'}, ensure_ascii=False)}\n\n"

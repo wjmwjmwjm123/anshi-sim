@@ -326,7 +326,7 @@ def generate_council_speech(
     identity = str(character.get("identity") or character.get("office") or "大唐臣属")
     stance = str(character.get("public_stance") or character.get("stance") or "未有定论")
     facts = _json_text(context or {})
-    round_prompt = "这是第二轮交锋。请针对上一位大臣的最新发言和当前纪要，简短反驳或补充，限两句。" if round_no == 2 else "这是第一轮表态。请清楚陈述你对议题的立场，限两句。"
+    round_prompt = "这是第二轮交锋。请针对上一位大臣的最新发言和当前纪要，简短反驳或补充，限两句。" if round_no >= 2 else "这是第一轮表态。请清楚陈述你对议题的立场，限两句。"
     extra_parts: list[str] = []
     if previous_speech:
         extra_parts.append(f"上一位大臣最新发言：{previous_speech}")

@@ -1,4 +1,9 @@
+import os
+
 from fastapi.testclient import TestClient
+
+# ponytail: prevent .env from loading real API keys during tests
+os.environ["ANSHI_TESTING"] = "1"
 
 from apps.api.main import create_app
 
@@ -19,7 +24,8 @@ def test_api_turn_persists_with_temporary_database(tmp_path) -> None:
 
 
 def test_complete_management_loop_uses_snapshot_audience_and_directives(tmp_path, monkeypatch) -> None:
-    monkeypatch.setattr("apps.api.main.generate_character_reply", lambda character, topic, scene="court", context=None, config=None, with_status=False: (f"{character.get('name', '臣下')}奏道：{topic}之事，钱粮为要。", False))
+    import apps.api.routes.council as _council_mod
+    monkeypatch.setattr(_council_mod, "generate_character_reply", lambda character, topic, scene="court", context=None, config=None, with_status=False: (f"{character.get('name', '臣下')}奏道：{topic}之事，钱粮为要。", False))
     app = create_app(tmp_path / "complete.db")
     with TestClient(app) as client:
         snapshot = client.get("/api/snapshot").json()
@@ -55,8 +61,9 @@ def test_secret_edict_and_model_config_do_not_echo_key(tmp_path) -> None:
 def test_dialogue_decree_strategy_and_save_loop(tmp_path, monkeypatch) -> None:
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("LONGCAT_API_KEY", raising=False)
-    monkeypatch.setattr("apps.api.main.generate_decree_candidates", lambda text, targets: ([{"kind": "relief", "target": "changan", "amount": 30, "subject": "", "reason": "文书模型解析"}], True))
-    monkeypatch.setattr("apps.api.main.polish_document", lambda text: (f"奉天承运皇帝诏曰：{text}", True))
+    import apps.api.routes.decree as _decree_mod
+    monkeypatch.setattr(_decree_mod, "generate_decree_candidates", lambda text, targets: ([{"kind": "relief", "target": "changan", "amount": 30, "subject": "", "reason": "文书模型解析"}], True))
+    monkeypatch.setattr(_decree_mod, "polish_document", lambda text: (f"奉天承运皇帝诏曰：{text}", True))
     app = create_app(tmp_path / "full-loop.db")
     with TestClient(app) as client:
         for topic in ("潼关应守还是战？", "朕答应事后酬功，请再陈利害", "军粮能支几日？"):

@@ -21,6 +21,10 @@
 | 事件插图 | 16 |
 | 自动化测试 | 31 项 |
 
+<p align="center">
+  <img src="apps/web/public/assets/backgrounds/tang-terrain.webp" alt="安史之乱战略地形图，标注唐军、燕军与争夺地区" width="860">
+</p>
+
 ![潼关战场](apps/web/public/assets/events/lingbao_battle.webp)
 
 ## 玩家实际在玩什么
@@ -43,11 +47,22 @@ flowchart LR
 - **远奏**：军镇人物只能基于地方见闻回答，也会承认消息迟滞。
 - **群议**：后发言者能读取前臣意见，在人设和利益约束下附和或反驳。
 
+<p align="center">
+  <img src="apps/web/public/assets/backgrounds/court-hall.webp" alt="紫宸殿公开朝堂" width="32%">
+  <img src="apps/web/public/assets/backgrounds/secret-chamber.webp" alt="密诏召对" width="32%">
+  <img src="apps/web/public/assets/backgrounds/remote-memorial.webp" alt="军镇远奏" width="32%">
+</p>
+
 ### 诏书与裁决不是点一下就生效
 
 玩家自由写下旨意后，文书模型会先把它润色为唐廷风格圣旨，再输出 JSON 行动候选。程序校验行动类别、目标和投入范围；通过核议的行动与已暂存的御前裁决，在“颁诏并推进”时统一结算。
 
 这意味着玩家可以先选定裁决，再继续召见人物、拟写诏书和调整方案，而不是被一个事件弹窗强行推进回合。
+
+<p align="center">
+  <img src="apps/web/public/assets/ui/edict-paper.webp" alt="御笔拟诏纸面" width="49%">
+  <img src="apps/web/public/assets/ui/decision-scroll.webp" alt="御前裁决纸面" width="49%">
+</p>
 
 ## 三类模型，三种职责
 
@@ -91,6 +106,21 @@ JSON 提案]
 - 16 地区点选地图、军队调动、会战、围城、补给与跨章债务。
 - 五幕战役、事件时钟、史料置信标识、自动存档和手动存读档。
 - 42 张人物立绘、9 张场景背景、16 张事件图和诏书/裁决纸面 UI。
+
+<p align="center">
+  <img src="apps/web/public/assets/portraits/xuanzong.webp" alt="唐玄宗立绘" width="15%">
+  <img src="apps/web/public/assets/portraits/geshu_han.webp" alt="哥舒翰立绘" width="15%">
+  <img src="apps/web/public/assets/portraits/yang_guozhong.webp" alt="杨国忠立绘" width="15%">
+  <img src="apps/web/public/assets/portraits/guo_ziyi.webp" alt="郭子仪立绘" width="15%">
+  <img src="apps/web/public/assets/portraits/an_lushan.webp" alt="安禄山立绘" width="15%">
+  <img src="apps/web/public/assets/portraits/li_heng.webp" alt="李亨立绘" width="15%">
+</p>
+
+<p align="center">
+  <img src="apps/web/public/assets/events/changan_escape.webp" alt="玄宗西幸事件图" width="32%">
+  <img src="apps/web/public/assets/events/shi_siming_assassination.webp" alt="史思明被弑事件图" width="32%">
+  <img src="apps/web/public/assets/events/tibet_changan_threat.webp" alt="吐蕃逼近关中事件图" width="32%">
+</p>
 
 ## 技术栈
 

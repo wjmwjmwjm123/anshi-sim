@@ -21,6 +21,28 @@ class LLMConfig:
     base_url: str
     model: str
     timeout: float = 20.0
+    advanced_model: str = ""
+    advanced_base_url: str = ""
+    advanced_api_key: str = ""
+
+
+# 推演/打分角色走 advanced model，其余走 main model（与 ming_sim/llm_config.py 一致）。
+_ADVANCED_ROLES = frozenset({"simulator", "extractor"})
+
+
+def for_role(cfg: LLMConfig, role: str) -> LLMConfig:
+    """按 agent 角色派生 LLMConfig：advanced 角色用 advanced_model（若已配），其余用 main model。"""
+    if role in _ADVANCED_ROLES and cfg.advanced_model:
+        return LLMConfig(
+            api_key=cfg.advanced_api_key or cfg.api_key,
+            base_url=cfg.advanced_base_url or cfg.base_url,
+            model=cfg.advanced_model,
+            timeout=cfg.timeout,
+            advanced_model=cfg.advanced_model,
+            advanced_base_url=cfg.advanced_base_url,
+            advanced_api_key=cfg.advanced_api_key,
+        )
+    return cfg
 
 
 def load_config(environ: Mapping[str, str] | None = None, role: str = "chat") -> LLMConfig | None:
@@ -55,7 +77,15 @@ def load_config(environ: Mapping[str, str] | None = None, role: str = "chat") ->
     else:
         base_url = role_base or "https://api.longcat.chat/openai/v1"
         model = role_model or "LongCat-2.0"
-    return LLMConfig(api_key, base_url, model)
+    adv_model = env.get("ADVANCED_MODEL", "").strip()
+    adv_base = env.get("ADVANCED_BASE_URL", "").strip()
+    adv_key = env.get("ADVANCED_API_KEY", "").strip()
+    return LLMConfig(
+        api_key, base_url, model,
+        advanced_model=adv_model,
+        advanced_base_url=adv_base,
+        advanced_api_key=adv_key,
+    )
 
 
 def is_available(environ: Mapping[str, str] | None = None) -> bool:

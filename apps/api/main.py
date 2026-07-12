@@ -21,6 +21,10 @@ from anshi.ai import (
     generate_decree_candidates, generate_turn_narration, generate_world_proposal,
     load_config, parse_council_stance, polish_document,
 )
+from anshi.agents import (
+    create_minister_agent, create_secretary_agent, run_agent,
+)
+from anshi.prompts import minister_user, secretary_user
 from anshi.conversation import ConversationState, confirm_decree, context_for, draft_freeform, promulgate_decrees, record_exchange
 from anshi.strategy import StrategyState, initial_strategy, queue_move as queue_army_move, resolve_movements, simulate_month
 from anshi.strategy import FieldArmy, Siege
@@ -413,21 +417,32 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
         exchanges, speeches, prev_speech = [], [], ""
         for character in selected:
             char_ctx = context_for(conversation, character["id"])
-            reply, model_used = generate_council_speech(
-                character, request.topic, {**world, **char_ctx},
-                round_no=request.round_no,
-                previous_speech=prev_speech,
-                minutes=request.previous_minutes,
-                emperor_remark=request.emperor_remark,
-                with_status=True,
+            ctx = {**world, **char_ctx}
+            agent = create_minister_agent(
+                character, request.topic, ctx,
+                round_no=request.round_no, previous_speech=prev_speech,
+                minutes=request.previous_minutes, emperor_remark=request.emperor_remark,
             )
+            user_prompt = minister_user(
+                character, request.topic, ctx,
+                round_no=request.round_no, previous_speech=prev_speech,
+                minutes=request.previous_minutes, emperor_remark=request.emperor_remark,
+            )
+            fallback = f"【态度：保留】{character.get('name', '臣下')}：此事尚须细察。"
+            reply, model_used = run_agent(agent, user_prompt, fallback=fallback, with_status=True)
+            if not parse_council_stance(reply):
+                reply = f"【态度：保留】{reply}"
             stance = parse_council_stance(reply)
             exchanges.append({"character_id": character["id"], "name": character["name"], "reply": reply, "stance": stance, "model_used": model_used})
             speeches.append({"name": character["name"], "reply": reply})
             prev_speech = f"{character['name']}：{reply}"
             record_exchange(conversation, character["id"], request.topic, reply, "廷议", progress.total_turn)
         is_final = request.round_no >= 2
-        minutes, _ = generate_council_minutes(request.topic, speeches, round_no=request.round_no, is_final=is_final)
+        sec_agent = create_secretary_agent(request.topic, speeches, round_no=request.round_no, is_final=is_final)
+        sec_prompt = secretary_user(request.topic, speeches, round_no=request.round_no, is_final=is_final)
+        topic_q = "“" + request.topic + "”"
+        sec_fallback = f"关于{topic_q}，群臣各陈己见，请陛下圣裁。" if is_final else f"关于{topic_q}，群臣已初步表态，尚存分歧。"
+        minutes, _ = run_agent(sec_agent, sec_prompt, fallback=sec_fallback, with_status=True)
         store.save_conversation(conversation)
         return {"accepted": True, "topic": request.topic, "exchanges": exchanges, "minutes": minutes}
 
@@ -461,14 +476,21 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
 
             for character in selected:
                 char_ctx = context_for(conversation, character["id"])
-                reply, model_used = generate_council_speech(
-                    character, request.topic, {**world, **char_ctx},
-                    round_no=round_no,
-                    previous_speech=prev_speech,
-                    minutes=request.previous_minutes,
-                    emperor_remark=request.emperor_remark,
-                    with_status=True,
+                ctx = {**world, **char_ctx}
+                agent = create_minister_agent(
+                    character, request.topic, ctx,
+                    round_no=round_no, previous_speech=prev_speech,
+                    minutes=request.previous_minutes, emperor_remark=request.emperor_remark,
                 )
+                user_prompt = minister_user(
+                    character, request.topic, ctx,
+                    round_no=round_no, previous_speech=prev_speech,
+                    minutes=request.previous_minutes, emperor_remark=request.emperor_remark,
+                )
+                fallback = f"【态度：保留】{character.get('name', '臣下')}：此事尚须细察。"
+                reply, model_used = run_agent(agent, user_prompt, fallback=fallback, with_status=True)
+                if not parse_council_stance(reply):
+                    reply = f"【态度：保留】{reply}"
                 stance = parse_council_stance(reply)
                 speeches.append({"name": character["name"], "reply": reply})
                 prev_speech = f"{character['name']}：{reply}"
@@ -476,9 +498,11 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
                 yield f"data: {json.dumps({'character_id': character['id'], 'name': character['name'], 'reply': reply, 'stance': stance, 'model_used': model_used, 'round': round_no}, ensure_ascii=False)}\n\n"
 
             is_final = round_no >= 2
-            minutes, _ = generate_council_minutes(
-                request.topic, speeches, round_no=round_no, is_final=is_final,
-            )
+            sec_agent = create_secretary_agent(request.topic, speeches, round_no=round_no, is_final=is_final)
+            sec_prompt = secretary_user(request.topic, speeches, round_no=round_no, is_final=is_final)
+            topic_q = "“" + request.topic + "”"
+            sec_fallback = f"关于{topic_q}，群臣各陈己见，请陛下圣裁。" if is_final else f"关于{topic_q}，群臣已初步表态，尚存分歧。"
+            minutes, _ = run_agent(sec_agent, sec_prompt, fallback=sec_fallback, with_status=True)
             yield f"data: {json.dumps({'type': 'minutes', 'round': 'final' if is_final else round_no, 'text': minutes}, ensure_ascii=False)}\n\n"
 
             store.save_conversation(conversation)

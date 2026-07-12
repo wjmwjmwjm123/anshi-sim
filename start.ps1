@@ -6,6 +6,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 $root = $PSScriptRoot
+$userArkKey = [Environment]::GetEnvironmentVariable("ARK_API_KEY", "User")
+if ([string]::IsNullOrWhiteSpace($env:ARK_API_KEY) -and -not [string]::IsNullOrWhiteSpace($userArkKey)) {
+    $env:ARK_API_KEY = $userArkKey
+}
 $apiUrl = "http://127.0.0.1:8000/api/health"
 $webUrl = "http://127.0.0.1:5173"
 

@@ -25,10 +25,17 @@ class Siege:
 
 
 @dataclass
+class ArmyMovement:
+    army_id: str
+    destination: str
+
+
+@dataclass
 class StrategyState:
     armies: dict[str, FieldArmy] = field(default_factory=dict)
     sieges: list[Siege] = field(default_factory=list)
     battle_log: list[str] = field(default_factory=list)
+    pending_movements: list[ArmyMovement] = field(default_factory=list)
 
 
 ROUTES = {
@@ -62,6 +69,34 @@ def move(state: StrategyState, army_id: str, destination: str) -> dict:
     army.supply = max(0, army.supply - 5)
     army.objective = f"进驻{destination}"
     return {"army": army_id, "from": origin, "to": destination, "supply": -5}
+
+
+def queue_move(state: StrategyState, army_id: str, destination: str) -> dict:
+    army = state.armies.get(army_id)
+    if not army:
+        raise ValueError("未找到该军队")
+    if not army.power.startswith("tang"):
+        raise ValueError("不能向敌军下达调动军令")
+    if destination not in ROUTES.get(army.region, []):
+        raise ValueError("目的地与当前驻地不相邻")
+    state.pending_movements = [item for item in state.pending_movements if item.army_id != army_id]
+    state.pending_movements.append(ArmyMovement(army_id, destination))
+    return {"army": army_id, "from": army.region, "to": destination, "queued": True}
+
+
+def resolve_movements(state: StrategyState) -> list[str]:
+    pending = state.pending_movements
+    state.pending_movements = []
+    events: list[str] = []
+    for order in pending:
+        army = state.armies.get(order.army_id)
+        name = army.name if army else order.army_id
+        try:
+            result = move(state, order.army_id, order.destination)
+            events.append(f"{name}奉诏由{result['from']}调往{result['to']}，行军耗粮5")
+        except ValueError as error:
+            events.append(f"{name}调动军令未能执行：{error}")
+    return events
 
 
 def simulate_month(state: StrategyState, act: int, seed: int) -> list[str]:

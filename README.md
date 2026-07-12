@@ -19,7 +19,7 @@
 | 战役事件节点 | 18 |
 | 场景背景 | 9 |
 | 事件插图 | 16 |
-| 自动化测试 | 31 项 |
+| 自动化测试 | 37 项 |
 
 <p align="center">
   <img src="apps/web/public/assets/backgrounds/tang-terrain.webp" alt="安史之乱战略地形图，标注唐军、燕军与争夺地区" width="860">
@@ -51,6 +51,11 @@ flowchart LR
   <img src="apps/web/public/assets/backgrounds/court-hall.webp" alt="紫宸殿公开朝堂" width="32%">
   <img src="apps/web/public/assets/backgrounds/secret-chamber.webp" alt="密诏召对" width="32%">
   <img src="apps/web/public/assets/backgrounds/remote-memorial.webp" alt="军镇远奏" width="32%">
+</p>
+
+<p align="center">
+  <img src="apps/web/public/assets/backgrounds/army-command.webp" alt="军令台深色背景" width="49%">
+  <img src="apps/web/public/assets/backgrounds/policy-hall.webp" alt="国策厅深色背景" width="49%">
 </p>
 
 ### 诏书与裁决不是点一下就生效
@@ -94,7 +99,7 @@ JSON 提案]
   S --> H[史官纪事与自动存档]
 ```
 
-推演模型允许提出地区民心、动乱、城防，军队士气与补给，事项压力与进度，人物忠诚、NPC 动向和事件伏线；它不能触碰现金、粮仓、兵力、日期、章节或硬规则战果。
+推演模型允许提出地区民心、动乱、城防，军队士气与补给，事项压力与进度，人物忠诚、局势进度方向、NPC 动向和事件伏线；局势方向会经过置信度、幅度和完成/崩坏阈值校验后才产生帝国修正。它不能触碰现金、粮仓、兵力、日期、章节或硬规则战果。
 
 ## 功能一览
 
@@ -104,8 +109,12 @@ JSON 提案]
 - 自由拟诏，文书模型生成圣旨并拆解为可校验的朝堂行动。
 - 御前裁决可暂存，与诏令一起进入统一回合结算。
 - 16 地区点选地图、军队调动、会战、围城、补给与跨章债务。
+- “天下”与“军情”分离：天下显示 16 个州镇的控制方、民心与动乱；军情只显示当前战区和军旗。
+- 军令先入队，目的地明确，在“颁诏并推进”时才执行；行军结果进入回合推演与战报。
+- 局势进度由推演模型每回合综合判断，完成或崩坏会写入帝国修正；国策树每回合最多选择一项，完成后提供持续 buff。
+- 奏报中心按军报、推演、奏对和事件整理真实回合记录，不再只是事件候选列表。
 - 五幕战役、事件时钟、史料置信标识、自动存档和手动存读档。
-- 42 张人物立绘、9 张场景背景、16 张事件图和诏书/裁决纸面 UI。
+- 42 张人物立绘、11 张场景背景、16 张事件图、军令图标切片和诏书/裁决纸面 UI。
 
 <p align="center">
   <img src="apps/web/public/assets/portraits/xuanzong.webp" alt="唐玄宗立绘" width="15%">
@@ -187,7 +196,7 @@ npm run dev
 
 可在游戏右上角的“模型分工”界面分别设置三类模型；密钥只保留在当前后端进程，API 不会回传密钥。
 
-也可用环境变量配置：
+也可用环境变量配置。ARK_API_KEY 用于 Seedream 生图；聊天职责还需要对应的模型名，不能把图片模型直接当作聊天模型。若要让三类聊天职责共用 Ark，可同时设置 ARK_BASE_URL 和 ARK_MODEL：
 
 ```powershell
 $env:CHAT_API_KEY='...'
@@ -226,7 +235,7 @@ cd apps/web
 npm run build
 ```
 
-当前结果：`31 passed`，前端生产构建通过。
+当前结果：`37 passed`，前端生产构建通过。
 
 ## 开发过程与文档
 

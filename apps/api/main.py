@@ -7,7 +7,7 @@ from dataclasses import asdict
 from pathlib import Path
 from threading import Lock
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse
@@ -16,9 +16,9 @@ from pydantic import BaseModel
 from anshi.content import load_scenario
 from anshi.core import Order, apply_order
 from anshi.campaign import ACT_NAMES, add_secret_edict, advance as advance_campaign
-from anshi.ai import generate_character_reply, generate_decree_candidates, generate_turn_narration, generate_world_proposal, is_available, load_config, polish_document
+from anshi.ai import generate_character_reply, generate_decree_candidates, generate_turn_narration, generate_world_proposal, load_config, polish_document
 from anshi.conversation import ConversationState, confirm_decree, context_for, draft_freeform, promulgate_decrees, record_exchange
-from anshi.strategy import StrategyState, initial_strategy, move as move_army, simulate_month
+from anshi.strategy import StrategyState, initial_strategy, queue_move as queue_army_move, resolve_movements, simulate_month
 from anshi.strategy import FieldArmy, Siege
 from anshi.storage import management_from_payload, state_from_payload
 from anshi.campaign import CampaignEvent, CampaignProgress
@@ -34,6 +34,7 @@ from anshi.management import (
 )
 from anshi.storage import GameStore
 from anshi.world_simulation import apply_world_proposal
+from anshi.situations import advance_situations, policy_catalog, resolve_policy, select_policy
 
 ROOT = Path(__file__).parents[2]
 SCENARIO = load_scenario(ROOT / "content" / "scenarios" / "tongguan_756")
@@ -96,6 +97,10 @@ class SaveSlotRequest(BaseModel):
 class ArmyMoveRequest(BaseModel):
     army_id: str
     destination: str
+
+
+class PolicySelectRequest(BaseModel):
+    policy_id: str
 
 
 def _hydrate_management(management) -> None:
@@ -280,18 +285,27 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
         store.save_conversation(conversation)
         store.save_strategy(strategy)
 
-    @app.get("/api/health")
-    def health() -> dict[str, str]:
-        config = load_config()
-        return {"status": "ok", "content_version": SCENARIO.manifest.content_version, "llm": "已配置" if is_available() else "未配置", "model": config.model if config else "中文模板"}
-
-    @app.get("/api/model-config")
-    def model_config() -> dict:
+    def model_roles_payload() -> dict:
         roles = {}
         for role in ("chat", "simulation", "utility"):
             config = load_config(role=role)
-            roles[role] = {"configured": config is not None, "base_url": config.base_url if config else "", "model": config.model if config else ""}
-        return {"roles": roles}
+            roles[role] = {
+                "configured": config is not None,
+                "status": "已配置，调用时验证" if config else "未配置",
+                "base_url": config.base_url if config else "",
+                "model": config.model if config else "",
+            }
+        return roles
+
+    @app.get("/api/health")
+    def health() -> dict:
+        roles = model_roles_payload()
+        configured = sum(item["configured"] for item in roles.values())
+        return {"status": "ok", "content_version": SCENARIO.manifest.content_version, "llm": f"已配置 {configured}/3" if configured else "未配置", "model": roles["chat"]["model"] or "中文模板", "models": roles}
+
+    @app.get("/api/model-config")
+    def model_config() -> dict:
+        return {"roles": model_roles_payload()}
 
     @app.post("/api/model-config")
     def update_model_config(request: ModelConfigRequest) -> dict:
@@ -319,16 +333,40 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
             "regions": [region.model_dump() for region in SCENARIO.regions],
         }
 
+    @app.get("/api/situations")
+    def situations() -> dict:
+        return {"situations": progress.situations, "modifiers": progress.modifiers}
+
+    @app.get("/api/policies")
+    def policies() -> dict:
+        return {"policies": policy_catalog(progress), "completed": progress.completed_policies, "active": progress.active_policy}
+
+    @app.post("/api/policies/select")
+    def choose_policy(request: PolicySelectRequest) -> dict:
+        with lock:
+            try:
+                item = select_policy(progress, request.policy_id)
+            except ValueError as error:
+                return {"accepted": False, "detail": str(error), "policies": policy_catalog(progress)}
+            store.save_progress(progress)
+            return {"accepted": True, "selected": item, "policies": policy_catalog(progress)}
+
     @app.get("/api/snapshot")
     def snapshot() -> dict:
         _activate_content(management, progress.act)
+        model_roles = model_roles_payload()
+        configured_models = sum(item["configured"] for item in model_roles.values())
         return {
             "state": {**campaign["state"].payload(), "save_revision": store.revision()},
             "management": asdict(management),
             "catalog": CAMPAIGN,
             "acts": [act.model_dump() for act in SCENARIO.acts],
             "progress": asdict(progress),
-            "runtime": {"联网模型": "已配置" if is_available() else "未配置，使用中文模板", "模型": load_config().model if load_config() else "中文模板"},
+            "runtime": {
+                "联网模型": f"已配置 {configured_models}/3" if configured_models else "未配置，使用中文模板",
+                "模型": model_roles["chat"]["model"] or "中文模板",
+                "模型职责": model_roles,
+            },
             "conversation": asdict(conversation),
             "strategy": asdict(strategy),
             "agent_runs": store.agent_runs(20),
@@ -505,7 +543,10 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
     @app.post("/api/armies/move")
     def move_field_army(request: ArmyMoveRequest) -> dict:
         with lock:
-            result = move_army(strategy, request.army_id, request.destination)
+            try:
+                result = queue_army_move(strategy, request.army_id, request.destination)
+            except ValueError as error:
+                raise HTTPException(status_code=400, detail=str(error)) from error
             store.save_strategy(strategy)
             return {"movement": result, "strategy": asdict(strategy)}
 
@@ -535,6 +576,8 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
                 return {"requires_choice": True, "event": campaign_result.get("event"), "progress": asdict(progress)}
             progress.pending_event_choice = None
             result = resolve_management(management, progress.act).payload()
+            result["world_events"].extend(resolve_policy(progress, campaign["state"], management))
+            result["world_events"].extend(resolve_movements(strategy))
             result["world_events"].extend(simulate_month(strategy, progress.act, progress.total_turn))
             event_effects = _apply_event_choice(management, campaign_result.get("resolved"))
             result["world_events"].extend(event_effects)
@@ -548,6 +591,8 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
                 "state": campaign["state"].payload(),
                 "management": asdict(management),
                 "strategy": asdict(strategy),
+                "situations": progress.situations,
+                "modifiers": progress.modifiers,
                 "date": f"{progress.year}年{progress.month}月",
                 "act": ACT_NAMES[progress.act],
             })
@@ -564,6 +609,9 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
                 for item in simulation["npc_actions"] if isinstance(item, dict)
             )
             result["world_events"].extend("事件伏线：" + item for item in simulation["event_seeds"])
+            result["world_events"].extend(advance_situations(progress, campaign["state"], management, simulation.get("situations")))
+            result["situations"] = progress.situations
+            result["modifiers"] = progress.modifiers
             simulation_config = load_config(role="simulation")
             store.record_agent_run("世界状态推演", simulation_config.model if simulation_config else "未配置", round((time.perf_counter() - proposal_started) * 1000), simulation_model_used)
             _sync_metrics(campaign["state"], management)

@@ -1,8 +1,10 @@
 __pycache__/
 .pytest_cache/
+.pytest_tmp/
 *.pyc
 apps/web/node_modules/
 apps/web/dist/
+apps/web/.playwright-cli/
 *.log
 data/*.db*
 output/

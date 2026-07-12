@@ -28,7 +28,7 @@ from .management import (
 )
 from .campaign import CampaignEvent, CampaignProgress, initial_progress
 from .conversation import ConversationState, Memory, Message, Relationship
-from .strategy import FieldArmy, Siege, StrategyState
+from .strategy import ArmyMovement, FieldArmy, Siege, StrategyState
 
 
 def state_from_payload(data: dict) -> GameState:
@@ -193,6 +193,7 @@ class GameStore:
             return None
         payload["armies"] = {key: FieldArmy(**value) for key, value in payload.get("armies", {}).items()}
         payload["sieges"] = [Siege(**item) for item in payload.get("sieges", [])]
+        payload["pending_movements"] = [ArmyMovement(**item) for item in payload.get("pending_movements", [])]
         return StrategyState(**payload)
 
     def save_strategy(self, state: StrategyState) -> None:

@@ -18,7 +18,8 @@ def test_api_turn_persists_with_temporary_database(tmp_path) -> None:
     app.state.game_store.close()
 
 
-def test_complete_management_loop_uses_snapshot_audience_and_directives(tmp_path) -> None:
+def test_complete_management_loop_uses_snapshot_audience_and_directives(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr("apps.api.main.generate_character_reply", lambda character, topic, scene="court", context=None, config=None, with_status=False: (f"{character.get('name', '臣下')}奏道：{topic}之事，钱粮为要。", False))
     app = create_app(tmp_path / "complete.db")
     with TestClient(app) as client:
         snapshot = client.get("/api/snapshot").json()
@@ -77,9 +78,14 @@ def test_dialogue_decree_strategy_and_save_loop(tmp_path, monkeypatch) -> None:
         assert confirmed["directives"]
         movement = client.post("/api/armies/move", json={"army_id":"tang_tongguan","destination":"lingbao"}).json()
         assert movement["movement"]["to"] == "lingbao"
+        assert movement["movement"]["queued"]
+        assert movement["strategy"]["armies"]["tang_tongguan"]["region"] == "tongguan"
+        invalid_movement = client.post("/api/armies/move", json={"army_id":"tang_tongguan","destination":"fanyang"})
+        assert invalid_movement.status_code == 400
 
         resolved = client.post("/api/resolve", json={}).json()
         assert resolved["result"]["world_events"]
+        assert client.get("/api/snapshot").json()["strategy"]["armies"]["tang_tongguan"]["region"] == "lingbao"
         assert client.get("/api/snapshot").json()["conversation"]["freeform_decrees"][0]["status"] == "已颁行"
         slots = client.get("/api/saves").json()["slots"]
         assert any(slot["slot_id"] == 0 for slot in slots)

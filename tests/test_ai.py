@@ -34,6 +34,30 @@ def test_longcat_fallback_config() -> None:
     assert config.model == "LongCat-2.0"
 
 
+def test_ark_global_config_can_back_all_model_roles() -> None:
+    env = {
+        "ARK_API_KEY": "secret",
+        "ARK_BASE_URL": "https://ark.example.test/api/v3",
+        "ARK_MODEL": "doubao-test",
+    }
+    for role in ("chat", "simulation", "utility"):
+        config = load_config(env, role=role)
+        assert config is not None
+        assert config.base_url == "https://ark.example.test/api/v3"
+        assert config.model == "doubao-test"
+
+
+def test_ark_key_without_model_is_not_reported_as_ready() -> None:
+    assert load_config({"ARK_API_KEY": "secret"}, role="simulation") is None
+
+
+def test_image_only_ark_key_does_not_hide_longcat_chat_config() -> None:
+    config = load_config({"ARK_API_KEY": "image-secret", "LONGCAT_API_KEY": "chat-secret"})
+    assert config is not None
+    assert config.api_key == "chat-secret"
+    assert config.model == "LongCat-2.0"
+
+
 def test_role_config_overrides_general_model() -> None:
     config = load_config({"OPENAI_API_KEY": "general", "OPENAI_MODEL": "small", "SIMULATION_API_KEY": "strong", "SIMULATION_MODEL": "large"}, role="simulation")
     assert config is not None

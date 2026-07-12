@@ -26,6 +26,15 @@ class CampaignProgress:
     completed_events: list[str] = field(default_factory=list)
     secret_edicts: list[dict] = field(default_factory=list)
     obligations: dict[str, int] = field(default_factory=lambda: {"回纥债务": 0, "藩镇自主": 20, "西陲空虚": 15, "战争疲敝": 28})
+    situations: list[dict] = field(default_factory=lambda: [
+        {"id": "tongguan_command", "title": "潼关军令", "summary": "中枢与行营能否形成一套可执行的军令。", "progress": 42, "status": "进行中", "trend": "摇摆", "last_reason": "等待本回合判断"},
+        {"id": "guanzhong_supply", "title": "关中粮道", "summary": "潼关、长安与关中粮运是否能支撑战局。", "progress": 55, "status": "进行中", "trend": "稳定", "last_reason": "等待本回合判断"},
+        {"id": "hebei_resistance", "title": "河朔人心", "summary": "河北州郡与忠唐势力是否愿意继续抵抗燕军。", "progress": 34, "status": "进行中", "trend": "暗流", "last_reason": "等待本回合判断"},
+    ])
+    modifiers: list[dict] = field(default_factory=list)
+    completed_policies: list[str] = field(default_factory=list)
+    active_policy: str = ""
+    policy_last_turn: int = 0
     ending: str = ""
 
 

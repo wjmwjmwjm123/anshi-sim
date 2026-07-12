@@ -26,18 +26,35 @@ class LLMConfig:
 def load_config(environ: Mapping[str, str] | None = None, role: str = "chat") -> LLMConfig | None:
     env = os.environ if environ is None else environ
     prefix = role.upper()
-    openai_key = env.get(f"{prefix}_API_KEY", "").strip() or env.get("OPENAI_API_KEY", "").strip()
+    role_key = env.get(f"{prefix}_API_KEY", "").strip()
+    ark_key = env.get("ARK_API_KEY", "").strip()
+    ark_model = env.get(f"{prefix}_MODEL", "").strip() or env.get("ARK_MODEL", "").strip()
+    openai_key = env.get("OPENAI_API_KEY", "").strip()
     longcat_key = env.get("LONGCAT_API_KEY", "").strip()
-    api_key = openai_key or longcat_key
+    api_key = role_key or (ark_key if ark_model else "") or openai_key or longcat_key
     if not api_key:
         return None
-    is_longcat = not openai_key and bool(longcat_key)
-    base_url = env.get(f"{prefix}_BASE_URL", "").strip() or env.get("OPENAI_BASE_URL", "").strip() or (
-        "https://api.longcat.chat/openai/v1" if is_longcat else "https://api.openai.com/v1"
-    )
-    model = env.get(f"{prefix}_MODEL", "").strip() or env.get("OPENAI_MODEL", "").strip() or (
-        "LongCat-2.0" if is_longcat else "gpt-4o-mini"
-    )
+    role_base = env.get(f"{prefix}_BASE_URL", "").strip()
+    role_model = env.get(f"{prefix}_MODEL", "").strip()
+    if role_key:
+        is_ark_role = role_key.startswith("ark-")
+        base_url = role_base or (env.get("ARK_BASE_URL", "").strip() if is_ark_role else env.get("OPENAI_BASE_URL", "").strip()) or (
+            "https://ark.cn-beijing.volces.com/api/v3" if is_ark_role else "https://api.openai.com/v1"
+        )
+        model = role_model or (env.get("ARK_MODEL", "").strip() if is_ark_role else env.get("OPENAI_MODEL", "").strip()) or (
+            "" if is_ark_role else "gpt-4o-mini"
+        )
+        if not model:
+            return None
+    elif ark_key and ark_model:
+        base_url = role_base or env.get("ARK_BASE_URL", "").strip() or "https://ark.cn-beijing.volces.com/api/v3"
+        model = ark_model
+    elif openai_key:
+        base_url = role_base or env.get("OPENAI_BASE_URL", "").strip() or "https://api.openai.com/v1"
+        model = role_model or env.get("OPENAI_MODEL", "").strip() or "gpt-4o-mini"
+    else:
+        base_url = role_base or "https://api.longcat.chat/openai/v1"
+        model = role_model or "LongCat-2.0"
     return LLMConfig(api_key, base_url, model)
 
 
@@ -180,7 +197,7 @@ def generate_decree_candidates(text: str, targets: Mapping[str, object], config:
         return [], False
 def generate_world_proposal(context: Mapping[str, object], config: LLMConfig | None = None) -> tuple[dict[str, object], bool]:
     cfg = config or load_config(role="simulation")
-    empty = {"assessment": "", "proposals": [], "npc_actions": [], "event_seeds": []}
+    empty = {"assessment": "", "proposals": [], "situations": [], "npc_actions": [], "event_seeds": []}
     if cfg is None:
         return empty, False
     messages = [
@@ -190,9 +207,11 @@ def generate_world_proposal(context: Mapping[str, object], config: LLMConfig | N
                 "你是历史策略游戏的受约束世界裁判。硬规则已经完成兵力、钱粮、路线和战斗结算。"
                 "你只提出软世界反应，不得改写硬结算。只输出一个JSON对象，不要代码围栏。"
                 "格式：{assessment:string,proposals:[{path:string,operation:'add',value:number,reason:string,confidence:number}],"
+                "situations:[{id:string,delta:number,reason:string,confidence:number}],"
                 "npc_actions:[{actor:string,intent:string}],event_seeds:[string]}。"
                 "允许路径仅为 regions.<id>.support/unrest/fortification、armies.<id>.morale/supply、"
-                "issues.<id>.tension/progress、characters.<id>.loyalty。每项变化应克制并有明确因果。"
+                "issues.<id>.tension/progress、characters.<id>.loyalty。situations 的 id 必须来自当前上下文，"
+                "delta 只能表达本回合局势向好或恶化的方向，不得直接完成局势。每项变化应克制并有明确因果。"
             ),
         },
         {"role": "user", "content": "当前回合权威上下文：\n" + _json_text(context)},

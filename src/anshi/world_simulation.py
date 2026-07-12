@@ -65,6 +65,7 @@ def apply_world_proposal(payload: dict[str, Any], management: Any) -> dict[str, 
         "assessment": str(payload.get("assessment", ""))[:500],
         "accepted": accepted,
         "rejected": rejected,
+        "situations": payload.get("situations", [])[:12] if isinstance(payload.get("situations", []), list) else [],
         "npc_actions": npc_actions[:12] if isinstance(npc_actions, list) else [],
         "event_seeds": [str(item)[:120] for item in event_seeds[:12]] if isinstance(event_seeds, list) else [],
     }

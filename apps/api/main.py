@@ -22,9 +22,10 @@ from anshi.ai import (
     load_config, parse_council_stance, polish_document,
 )
 from anshi.agents import (
-    create_minister_agent, create_secretary_agent, run_agent,
+    create_minister_agent, create_secretary_agent, run_agent, run_agent_stream,
 )
 from anshi.prompts import minister_user, secretary_user
+from anshi import token_stats
 from anshi.conversation import ConversationState, confirm_decree, context_for, draft_freeform, promulgate_decrees, record_exchange
 from anshi.strategy import StrategyState, initial_strategy, queue_move as queue_army_move, resolve_movements, simulate_month
 from anshi.strategy import FieldArmy, Siege
@@ -308,6 +309,10 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
             }
         return roles
 
+    @app.get("/api/token-stats")
+    def get_token_stats() -> dict:
+        return token_stats.summary()
+
     @app.get("/api/health")
     def health() -> dict:
         roles = model_roles_payload()
@@ -487,22 +492,34 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
                     round_no=round_no, previous_speech=prev_speech,
                     minutes=request.previous_minutes, emperor_remark=request.emperor_remark,
                 )
-                fallback = f"【态度：保留】{character.get('name', '臣下')}：此事尚须细察。"
-                reply, model_used = run_agent(agent, user_prompt, fallback=fallback, with_status=True)
+                # 通知前端此大臣开始发言
+                yield f"data: {json.dumps({'type': 'speech_start', 'character_id': character['id'], 'name': character['name'], 'round': round_no}, ensure_ascii=False)}\n\n"
+                # 真流式：逐字推送 LLM 输出
+                reply_buf = []
+                try:
+                    for chunk in run_agent_stream(agent, user_prompt, tag=f"廷议-{character['name']}"):
+                        reply_buf.append(chunk)
+                        yield f"data: {json.dumps({'type': 'speech_delta', 'character_id': character['id'], 'delta': chunk}, ensure_ascii=False)}\n\n"
+                except Exception:
+                    pass
+                reply = "".join(reply_buf).strip()
+                if not reply:
+                    reply = f"【态度：保留】{character.get('name', '臣下')}：此事尚须细察。"
                 if not parse_council_stance(reply):
                     reply = f"【态度：保留】{reply}"
                 stance = parse_council_stance(reply)
                 speeches.append({"name": character["name"], "reply": reply})
                 prev_speech = f"{character['name']}：{reply}"
                 record_exchange(conversation, character["id"], request.topic, reply, "廷议", progress.total_turn)
-                yield f"data: {json.dumps({'character_id': character['id'], 'name': character['name'], 'reply': reply, 'stance': stance, 'model_used': model_used, 'round': round_no}, ensure_ascii=False)}\n\n"
+                # 发言结束，发完整 reply + stance
+                yield f"data: {json.dumps({'type': 'speech_end', 'character_id': character['id'], 'name': character['name'], 'reply': reply, 'stance': stance, 'round': round_no}, ensure_ascii=False)}\n\n"
 
             is_final = round_no >= 2
             sec_agent = create_secretary_agent(request.topic, speeches, round_no=round_no, is_final=is_final)
             sec_prompt = secretary_user(request.topic, speeches, round_no=round_no, is_final=is_final)
             topic_q = "“" + request.topic + "”"
             sec_fallback = f"关于{topic_q}，群臣各陈己见，请陛下圣裁。" if is_final else f"关于{topic_q}，群臣已初步表态，尚存分歧。"
-            minutes, _ = run_agent(sec_agent, sec_prompt, fallback=sec_fallback, with_status=True)
+            minutes, _ = run_agent(sec_agent, sec_prompt, fallback=sec_fallback, with_status=True, tag="中书舍人纪要")
             yield f"data: {json.dumps({'type': 'minutes', 'round': 'final' if is_final else round_no, 'text': minutes}, ensure_ascii=False)}\n\n"
 
             store.save_conversation(conversation)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from dataclasses import asdict, dataclass, is_dataclass
 from typing import Literal, Mapping
 from urllib.request import Request, urlopen
@@ -92,24 +93,29 @@ def is_available(environ: Mapping[str, str] | None = None) -> bool:
     return load_config(environ) is not None
 
 
+def _endpoint(cfg: LLMConfig) -> str:
+    ep = cfg.base_url.rstrip("/")
+    if not ep.endswith("/chat/completions"):
+        ep += "/chat/completions"
+    return ep
+
+
 def chat_completion(
     messages: list[dict[str, str]],
     config: LLMConfig | None = None,
     *,
     temperature: float = 0.7,
+    tag: str = "",
 ) -> str:
     cfg = config or load_config()
     if cfg is None:
         raise RuntimeError("未配置联网模型")
-    endpoint = cfg.base_url.rstrip("/")
-    if not endpoint.endswith("/chat/completions"):
-        endpoint += "/chat/completions"
     body = json.dumps(
         {"model": cfg.model, "messages": messages, "temperature": temperature},
         ensure_ascii=False,
     ).encode("utf-8")
     request = Request(
-        endpoint,
+        _endpoint(cfg),
         data=body,
         headers={"Authorization": f"Bearer {cfg.api_key}", "Content-Type": "application/json"},
         method="POST",
@@ -119,7 +125,58 @@ def chat_completion(
     content = payload["choices"][0]["message"]["content"]
     if not isinstance(content, str) or not content.strip():
         raise ValueError("模型返回了空内容")
+    # token 记账
+    usage = payload.get("usage")
+    if isinstance(usage, dict):
+        from anshi.token_stats import record as record_token
+        record_token(cfg.model, usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0), tag=tag)
     return content.strip()
+
+
+def stream_chat_completion(
+    messages: list[dict[str, str]],
+    config: LLMConfig | None = None,
+    *,
+    temperature: float = 0.7,
+    tag: str = "",
+):
+    """流式 chat completion。yield 每个 delta content 片段，最终 yield token usage dict。"""
+    import httpx
+
+    cfg = config or load_config()
+    if cfg is None:
+        raise RuntimeError("未配置联网模型")
+    body = {
+        "model": cfg.model,
+        "messages": messages,
+        "temperature": temperature,
+        "stream": True,
+    }
+    total_content = ""
+    with httpx.Client(timeout=httpx.Timeout(cfg.timeout, connect=10.0, read=cfg.timeout)) as client:
+        with client.stream("POST", _endpoint(cfg), json=body, headers={"Authorization": f"Bearer {cfg.api_key}"}) as resp:
+            resp.raise_for_status()
+            for line in resp.iter_lines():
+                if not line or not line.startswith("data: "):
+                    continue
+                data = line[6:]
+                if data.strip() == "[DONE]":
+                    break
+                try:
+                    chunk = json.loads(data)
+                except json.JSONDecodeError:
+                    continue
+                delta = chunk.get("choices", [{}])[0].get("delta", {}).get("content", "")
+                if delta:
+                    total_content += delta
+                    yield delta
+                # 流式 usage（部分 provider 在最后一个 chunk 返回）
+                usage = chunk.get("usage")
+                if isinstance(usage, dict):
+                    from anshi.token_stats import record as record_token
+                    record_token(cfg.model, usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0), tag=tag)
+    if not total_content.strip():
+        raise ValueError("模型返回了空内容")
 
 
 def generate_character_reply(
@@ -291,6 +348,46 @@ def _turn_fallback(data: object) -> str:
     headline = data.get("headline", "本回合结算完毕")
     narrative = data.get("narrative", "结果已依既定规则写入实录。")
     return f"{headline}。{narrative}"
+
+
+def sanitize_json(raw: str) -> dict | list | None:
+    """从 LLM 输出中提取合法 JSON。仿照 ming_sim parse_agent_json + sanitizer。
+
+    依次尝试：原文解析 → 截取首尾花括号 → 去除控制字符 → 去除 json fence。
+    """
+    text = raw.strip()
+    # 去除 ```json fence
+    if text.startswith("```"):
+        first_nl = text.find("\n")
+        if first_nl > 0:
+            text = text[first_nl + 1:]
+        if text.endswith("```"):
+            text = text[:-3].strip()
+    # 试 1：原文直解
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    # 试 2：截取最外层 {...}
+    start, end = text.find("{"), text.rfind("}")
+    if start >= 0 and end > start:
+        snippet = text[start : end + 1]
+        # 去控制字符
+        snippet = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", snippet)
+        try:
+            return json.loads(snippet)
+        except json.JSONDecodeError:
+            pass
+    # 试 3：截取最外层 [...]
+    start, end = text.find("["), text.rfind("]")
+    if start >= 0 and end > start:
+        snippet = text[start : end + 1]
+        snippet = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", snippet)
+        try:
+            return json.loads(snippet)
+        except json.JSONDecodeError:
+            pass
+    return None
 
 
 CouncilStance = Literal["支持", "反对", "保留", "观望", "中立"]

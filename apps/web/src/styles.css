@@ -26,3 +26,5 @@
 .council-minutes{margin:18px 0;padding:14px 18px;text-align:center;color:#292a25;background:#f0e6d0;border:1px dashed #b59c6d;font-size:13px;line-height:1.8}.council-minutes b{display:block;margin-bottom:6px;color:#7e3029;font:16px KaiTi,STKaiti,serif}
 .emperor-panel{margin:24px 0 8px;padding:18px;text-align:center;background:#3a2a22;border:2px solid #c8a85c}.emperor-panel>b{display:block;margin-bottom:12px;color:#f0ddb0;font:20px KaiTi,STKaiti,serif}.emperor-actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}.emperor-actions button{min-width:120px;padding:10px 16px;color:#f5e8cd;background:#5b3424;border:1px solid #c8a85c;font:13px KaiTi,STKaiti,serif;cursor:pointer}.emperor-actions button:hover{background:#8b3b33}
 .council-busy{margin:16px 0;text-align:center;color:#d2ae5d;font-size:13px}
+.typing-cursor{color:#8d342d;animation:blink 0.8s step-end infinite}@keyframes blink{50%{opacity:0}}
+.council-transcript article.streaming{opacity:.85}

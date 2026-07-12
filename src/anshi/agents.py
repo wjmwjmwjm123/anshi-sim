@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Callable, Mapping
+from typing import Callable, Generator, Mapping
 
-from anshi.ai import LLMConfig, chat_completion, for_role, load_config
+from anshi.ai import LLMConfig, chat_completion, for_role, load_config, sanitize_json, stream_chat_completion
 from anshi.prompts import (
     CHARACTER_SYSTEM,
     MINISTER_SYSTEM,
@@ -129,22 +129,29 @@ def create_simulator_agent(config: LLMConfig | None = None) -> CouncilAgent:
 # --- 执行函数 ---
 
 
+def _messages(agent: CouncilAgent, user_prompt: str) -> list[dict[str, str]]:
+    return [
+        {"role": "system", "content": agent.system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
+
+
 def run_agent(
     agent: CouncilAgent,
     user_prompt: str,
     *,
     fallback: str = "",
     with_status: bool = False,
+    tag: str = "",
 ) -> str | tuple[str, bool]:
-    """执行 agent，返回文本。仿照 ming_sim run_agent_text。"""
+    """执行 agent（非流式），返回文本。仿照 ming_sim run_agent_text。"""
     if not agent.config.api_key:
         return (fallback, False) if with_status else fallback
-    messages = [
-        {"role": "system", "content": agent.system_prompt},
-        {"role": "user", "content": user_prompt},
-    ]
     try:
-        text = chat_completion(messages, agent.config, temperature=agent.temperature)
+        text = chat_completion(
+            _messages(agent, user_prompt), agent.config,
+            temperature=agent.temperature, tag=tag or agent.name,
+        )
         return (text, True) if with_status else text
     except (OSError, TimeoutError, KeyError, IndexError, TypeError, ValueError, RuntimeError, json.JSONDecodeError):
         return (fallback, False) if with_status else fallback
@@ -154,13 +161,53 @@ def run_agent_stream(
     agent: CouncilAgent,
     user_prompt: str,
     on_chunk: Callable[[str], None] | None = None,
-) -> str:
-    """执行 agent（流式占位，当前退化为非流式）。仿照 ming_sim run_agent_stream_text。"""
-    messages = [
-        {"role": "system", "content": agent.system_prompt},
-        {"role": "user", "content": user_prompt},
-    ]
-    text = chat_completion(messages, agent.config, temperature=agent.temperature)
-    if on_chunk:
-        on_chunk(text)
-    return text
+    tag: str = "",
+) -> Generator[str, None, None]:
+    """执行 agent（真流式），yield 每个 delta 片段。仿照 ming_sim run_agent_stream_text。
+
+    用法：
+        for chunk in run_agent_stream(agent, prompt):
+            send_sse(chunk)
+    """
+    if not agent.config.api_key:
+        return
+    try:
+        for chunk in stream_chat_completion(
+            _messages(agent, user_prompt), agent.config,
+            temperature=agent.temperature, tag=tag or agent.name,
+        ):
+            if isinstance(chunk, str):
+                if on_chunk:
+                    on_chunk(chunk)
+                yield chunk
+    except (OSError, TimeoutError, KeyError, IndexError, TypeError, ValueError, RuntimeError, json.JSONDecodeError):
+        return
+
+
+def run_agent_json(
+    agent: CouncilAgent,
+    user_prompt: str,
+    *,
+    fallback: dict | list | None = None,
+    with_status: bool = False,
+    tag: str = "",
+) -> tuple[dict | list | None, bool]:
+    """执行 agent 并解析 JSON 输出。仿照 ming_sim parse_agent_json + sanitizer 兜底。
+
+    1. 调用 LLM
+    2. sanitize_json 提取 JSON
+    3. 失败则返回 fallback
+    """
+    if not agent.config.api_key:
+        return fallback, False
+    try:
+        text = chat_completion(
+            _messages(agent, user_prompt), agent.config,
+            temperature=agent.temperature, tag=tag or agent.name,
+        )
+    except (OSError, TimeoutError, KeyError, IndexError, TypeError, ValueError, RuntimeError, json.JSONDecodeError):
+        return fallback, False
+    parsed = sanitize_json(text)
+    if parsed is not None:
+        return parsed, True
+    return fallback, False

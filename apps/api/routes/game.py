@@ -4,11 +4,14 @@ from __future__ import annotations
 import time
 from dataclasses import asdict
 
+import json as _json
+
 from fastapi import APIRouter
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from anshi.ai import generate_turn_narration, generate_world_proposal, load_config
-from anshi.agents import create_gazette_agent, run_agent
+from anshi.agents import create_gazette_agent, run_agent, run_agent_stream
 from anshi.campaign import ACT_NAMES, advance as advance_campaign, CampaignEvent, CampaignProgress
 from anshi.conversation import ConversationState, promulgate_decrees
 from anshi.core import Order, apply_order
@@ -248,6 +251,110 @@ def register(router_: APIRouter, game) -> None:
             game.store.save(game.campaign["state"])
             game.store.save_slot(0, "自动存档", game.unified_payload())
             return {"result": result, "narration": narration, "gazette": gazette, "model_used": model_used, "simulation_model_used": simulation_model_used, "campaign_result": campaign_result, "progress": asdict(game.progress), "state": {**game.campaign["state"].payload(), "save_revision": game.store.revision()}, "management": asdict(game.management)}
+
+    @router_.post("/api/resolve/stream")
+    def resolve_stream(request: ResolveRequest = ResolveRequest()):
+        """流式结算：先执行全部硬结算，再流式输出邸报。"""
+        with game.lock:
+            pending = game.progress.pending_event_choice if isinstance(game.progress.pending_event_choice, dict) else {}
+            event_choice = request.event_choice or pending.get("choice", "")
+            if game.progress.active_event and event_choice and event_choice not in game.progress.active_event.choices:
+                def err(): yield f"data: {_json.dumps({'error': '暂存裁决已失效'}, ensure_ascii=False)}\n\n"
+                return StreamingResponse(err(), media_type="text/event-stream")
+            campaign_result = advance_campaign(game.progress, event_choice)
+            if not campaign_result.get("advanced"):
+                def err2(): yield f"data: {_json.dumps({'requires_choice': True, 'event': campaign_result.get('event')}, ensure_ascii=False)}\n\n"
+                return StreamingResponse(err2(), media_type="text/event-stream")
+
+            # --- 硬结算（与 /api/resolve 完全一致） ---
+            game.progress.pending_event_choice = None
+            result = resolve_management(game.management, game.progress.act).payload()
+            result["world_events"].extend(resolve_policy(game.progress, game.campaign["state"], game.management))
+            result["world_events"].extend(resolve_movements(game.strategy))
+            result["world_events"].extend(simulate_month(game.strategy, game.progress.act, game.progress.total_turn))
+            event_effects = _apply_event_choice(game.management, campaign_result.get("resolved"))
+            result["world_events"].extend(event_effects)
+            result["world_events"].extend(campaign_result.get("secret_updates", []))
+            issued = promulgate_decrees(game.conversation, game.progress.total_turn)
+            result["world_events"].extend(f"圣旨颁行：《{item.get('rendered_text') or item['text'][:24]}》" for item in issued)
+            proposal_started = time.perf_counter()
+            proposal, simulation_model_used = generate_world_proposal({
+                "turn": result, "campaign": campaign_result, "state": game.campaign["state"].payload(),
+                "management": asdict(game.management), "strategy": asdict(game.strategy),
+                "situations": game.progress.situations, "modifiers": game.progress.modifiers,
+                "date": f"{game.progress.year}年{game.progress.month}月", "act": ACT_NAMES[game.progress.act],
+            })
+            simulation = apply_world_proposal(proposal, game.management)
+            result["llm_simulation"] = simulation
+            if simulation["assessment"]:
+                result["world_events"].append("推演判断：" + simulation["assessment"])
+            result["world_events"].extend(f"推演影响：{item['path']} {item['before']}→{item['after']}（{item['reason']}）" for item in simulation["accepted"])
+            result["world_events"].extend(f"人物动向：{item.get('actor', '未知')}：{item.get('intent', '')}" for item in simulation["npc_actions"] if isinstance(item, dict))
+            result["world_events"].extend("事件伏线：" + item for item in simulation["event_seeds"])
+            result["world_events"].extend(advance_situations(game.progress, game.campaign["state"], game.management, simulation.get("situations")))
+            result["situations"] = game.progress.situations
+            result["modifiers"] = game.progress.modifiers
+            simulation_config = load_config(role="simulation")
+            game.store.record_agent_run("世界状态推演", simulation_config.model if simulation_config else "未配置", round((time.perf_counter() - proposal_started) * 1000), simulation_model_used)
+            _sync_metrics(game.campaign["state"], game.management)
+            game.campaign["state"].act_id = f"act{game.progress.act}"
+            game.campaign["state"].phase = ACT_NAMES[game.progress.act]
+            game.campaign["state"].clock.date_label = f"公元{game.progress.year}年{game.progress.month}月"
+            activate_strategy()
+            game.campaign["state"].history.insert(0, f"至德纪元第{game.progress.total_turn}回合：{ACT_NAMES[game.progress.act]}局势结算。")
+            started = time.perf_counter()
+            narration, model_used = generate_turn_narration({"turn": result["turn"], "reports": result["reports"], "diff": result["diff"], "campaign": campaign_result, "strategy": result["world_events"], "llm_simulation": simulation}, with_status=True)
+            config = load_config(role="simulation")
+            game.store.record_agent_run("回合推演", config.model if config else "中文模板", round((time.perf_counter() - started) * 1000), model_used)
+            game.campaign["state"].history.insert(0, narration)
+
+            # 构建邸报 prompt
+            gazette_agent = create_gazette_agent()
+            gazette_prompt = gazette_user({
+                "日期": f"{game.progress.year}年{game.progress.month}月", "章节": ACT_NAMES[game.progress.act],
+                "回合": game.progress.total_turn, "纪事": narration, "天下演化": result["world_events"][:15],
+                "推演判断": simulation.get("assessment", ""),
+                "推演影响": [f"{item['path']} {item['before']}→{item['after']}（{item['reason']}）" for item in simulation["accepted"][:8]],
+                "人物动向": [f"{item.get('actor', '未知')}：{item.get('intent', '')}" for item in simulation["npc_actions"] if isinstance(item, dict)][:5],
+                "局势": [f"{item.get('title','')} {item.get('status','')} {item.get('progress',0)}/100" if isinstance(item, dict) else f"{getattr(item,'title','')} {getattr(item,'status','')} {getattr(item,'progress',0)}/100" for item in game.progress.situations][:6],
+                "财务": {"现银": game.management.finance.cash, "粮储": game.management.finance.grain},
+            })
+
+            # 保存快照（在流式输出之前）
+            game.store.record_turn("resolve", result)
+            game.store.save_management(game.management)
+            game.store.save_progress(game.progress)
+            game.store.save_conversation(game.conversation)
+            game.store.save_strategy(game.strategy)
+            game.store.save(game.campaign["state"])
+            game.store.save_slot(0, "自动存档", game.unified_payload())
+
+            snapshot = {"result": result, "narration": narration, "model_used": model_used,
+                        "simulation_model_used": simulation_model_used, "campaign_result": campaign_result,
+                        "progress": asdict(game.progress),
+                        "state": {**game.campaign["state"].payload(), "save_revision": game.store.revision()},
+                        "management": asdict(game.management)}
+
+        # --- 流式输出（锁外） ---
+        def generate():
+            # 先发结算快照（不含邸报）
+            yield f"data: {_json.dumps({'type': 'snapshot', 'data': snapshot}, ensure_ascii=False)}\n\n"
+            # 流式输出邸报
+            yield f"data: {_json.dumps({'type': 'gazette_start'}, ensure_ascii=False)}\n\n"
+            gazette_buf = []
+            try:
+                for chunk in run_agent_stream(gazette_agent, gazette_prompt, tag="邸报"):
+                    gazette_buf.append(chunk)
+                    yield f"data: {_json.dumps({'type': 'gazette_delta', 'delta': chunk}, ensure_ascii=False)}\n\n"
+            except Exception:
+                pass
+            gazette = "".join(gazette_buf).strip()
+            if not gazette:
+                gazette = f"【邸报】{game.progress.year}年{game.progress.month}月，{ACT_NAMES[game.progress.act]}。{narration}"
+            yield f"data: {_json.dumps({'type': 'gazette_end', 'gazette': gazette}, ensure_ascii=False)}\n\n"
+            yield f"data: {_json.dumps({'done': True}, ensure_ascii=False)}\n\n"
+
+        return StreamingResponse(generate(), media_type="text/event-stream")
 
     @router_.post("/api/reset")
     def reset() -> dict:

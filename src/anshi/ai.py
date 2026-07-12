@@ -93,11 +93,38 @@ def is_available(environ: Mapping[str, str] | None = None) -> bool:
     return load_config(environ) is not None
 
 
+def fail_if_llm_error(text: str, stage: str) -> None:
+    """检测 LLM 返回中的认证/接口错误，直接报错而非静默 fallback。"""
+    lowered = text.lower()
+    markers = ("incorrect api key", "invalid_api_key", "error code: 401", "unauthorized", "authentication")
+    if any(m in lowered for m in markers):
+        raise RuntimeError(f"{stage} 失败：LLM 认证或接口错误。请检查 .env 里的 API_KEY / BASE_URL / MODEL。")
+
+
 def _endpoint(cfg: LLMConfig) -> str:
     ep = cfg.base_url.rstrip("/")
     if not ep.endswith("/chat/completions"):
         ep += "/chat/completions"
     return ep
+
+
+# --- 供应商适配（搬自 ming_sim/llm_config.py） ---
+
+_PROVIDER_EXTRA: dict[str, dict] = {
+    "deepseek": {"thinking": {"type": "disabled"}},
+    "dashscope": {"enable_thinking": False},
+    "aliyuncs": {"enable_thinking": False},
+    "minimax": {"thinking": {"type": "disabled"}},
+}
+
+
+def provider_extra_body(base_url: str) -> dict | None:
+    """根据 base_url 自动注入供应商特定参数（如关思考模式）。"""
+    lowered = base_url.lower()
+    for key, extra in _PROVIDER_EXTRA.items():
+        if key in lowered:
+            return dict(extra)
+    return None
 
 
 def chat_completion(
@@ -110,10 +137,11 @@ def chat_completion(
     cfg = config or load_config()
     if cfg is None:
         raise RuntimeError("未配置联网模型")
-    body = json.dumps(
-        {"model": cfg.model, "messages": messages, "temperature": temperature},
-        ensure_ascii=False,
-    ).encode("utf-8")
+    payload: dict = {"model": cfg.model, "messages": messages, "temperature": temperature}
+    extra = provider_extra_body(cfg.base_url)
+    if extra:
+        payload["extra_body"] = extra
+    body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     request = Request(
         _endpoint(cfg),
         data=body,
@@ -146,12 +174,15 @@ def stream_chat_completion(
     cfg = config or load_config()
     if cfg is None:
         raise RuntimeError("未配置联网模型")
-    body = {
+    body: dict = {
         "model": cfg.model,
         "messages": messages,
         "temperature": temperature,
         "stream": True,
     }
+    extra = provider_extra_body(cfg.base_url)
+    if extra:
+        body["extra_body"] = extra
     total_content = ""
     with httpx.Client(timeout=httpx.Timeout(cfg.timeout, connect=10.0, read=cfg.timeout)) as client:
         with client.stream("POST", _endpoint(cfg), json=body, headers={"Authorization": f"Bearer {cfg.api_key}"}) as resp:

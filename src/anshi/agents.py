@@ -32,14 +32,33 @@ from anshi.prompts import (
 )
 
 
+# 角色默认采样参数（可被 GAME_SETTINGS 覆盖）
+_ROLE_SAMPLING: dict[str, tuple[float, float]] = {
+    "minister": (0.65, 0.9),
+    "secretary": (0.4, 0.5),
+    "character": (0.7, 0.9),
+    "narrator": (0.4, 0.5),
+    "simulator": (0.5, 0.5),
+    "court_script": (0.75, 0.9),
+    "gazette": (0.4, 0.5),
+}
+
+
+def _sampling_for(role: str, temperature: float | None = None, top_p: float | None = None) -> tuple[float, float | None]:
+    """返回 (temperature, top_p)。显式传入优先，否则用角色默认。"""
+    default_t, default_p = _ROLE_SAMPLING.get(role, (0.7, None))
+    return (temperature if temperature is not None else default_t, top_p if top_p is not None else default_p)
+
+
 @dataclass
 class CouncilAgent:
     """廷议 agent 配置（仿照 ming_sim Agent，但不依赖 agno）。"""
     name: str
-    role: str  # "minister" | "secretary" | "character" | "narrator" | "simulator"
+    role: str  # "minister" | "secretary" | "character" | "narrator" | "simulator" | "court_script" | "gazette"
     system_prompt: str
     config: LLMConfig
     temperature: float = 0.7
+    top_p: float | None = None
 
 
 # --- 工厂函数 ---
@@ -59,12 +78,13 @@ def create_minister_agent(
     """廷议大臣 agent：生成发言，带态度标签。"""
     cfg = config or load_config(role="chat") or LLMConfig("", "", "")
     name = str(character.get("name", "臣下"))
+    t, p = _sampling_for("minister")
     return CouncilAgent(
         name=f"廷议大臣-{name}",
         role="minister",
         system_prompt=MINISTER_SYSTEM,
         config=for_role(cfg, "minister"),
-        temperature=0.65,
+        temperature=t, top_p=p,
     )
 
 
@@ -78,12 +98,13 @@ def create_secretary_agent(
 ) -> CouncilAgent:
     """中书舍人 agent：整理廷议纪要。"""
     cfg = config or load_config(role="utility") or LLMConfig("", "", "")
+    t, p = _sampling_for("secretary")
     return CouncilAgent(
         name="中书舍人",
         role="secretary",
         system_prompt=SECRETARY_SYSTEM,
         config=for_role(cfg, "secretary"),
-        temperature=0.4,
+        temperature=t, top_p=p,
     )
 
 
@@ -97,60 +118,65 @@ def create_character_agent(
     cfg = config or load_config(role="chat") or LLMConfig("", "", "")
     name = str(character.get("name", "臣下"))
     scene_prompt = SCENE_PROMPTS.get(scene, SCENE_PROMPTS["court"])
+    t, p = _sampling_for("character")
     return CouncilAgent(
         name=f"奏对-{name}",
         role="character",
         system_prompt=CHARACTER_SYSTEM + scene_prompt,
         config=for_role(cfg, "character"),
-        temperature=0.7,
+        temperature=t, top_p=p,
     )
 
 
 def create_narrator_agent(config: LLMConfig | None = None) -> CouncilAgent:
     """史官 agent：回合叙事。"""
     cfg = config or load_config(role="simulation") or LLMConfig("", "", "")
+    t, p = _sampling_for("narrator")
     return CouncilAgent(
         name="史官",
         role="narrator",
         system_prompt=NARRATOR_SYSTEM,
         config=for_role(cfg, "narrator"),
-        temperature=0.4,
+        temperature=t, top_p=p,
     )
 
 
 def create_simulator_agent(config: LLMConfig | None = None) -> CouncilAgent:
     """世界推演 agent：软世界反应。"""
     cfg = config or load_config(role="simulation") or LLMConfig("", "", "")
+    t, p = _sampling_for("simulator")
     return CouncilAgent(
         name="世界推演官",
         role="simulator",
         system_prompt=WORLD_PROPOSAL_SYSTEM,
         config=for_role(cfg, "simulator"),
-        temperature=0.45,
+        temperature=t, top_p=p,
     )
 
 
 def create_court_script_agent(config: LLMConfig | None = None) -> CouncilAgent:
     """廷议剧本 agent：一次调用生成整场廷议对话。"""
     cfg = config or load_config(role="chat") or LLMConfig("", "", "")
+    t, p = _sampling_for("court_script")
     return CouncilAgent(
         name="朝会编剧",
         role="court_script",
         system_prompt=COURT_SCRIPT_SYSTEM,
         config=for_role(cfg, "chat"),
-        temperature=0.75,
+        temperature=t, top_p=p,
     )
 
 
 def create_gazette_agent(config: LLMConfig | None = None) -> CouncilAgent:
     """邸报 agent：生成回合邸报。"""
     cfg = config or load_config(role="utility") or LLMConfig("", "", "")
+    t, p = _sampling_for("gazette")
     return CouncilAgent(
         name="邸报官",
         role="gazette",
         system_prompt=GAZETTE_SYSTEM,
         config=for_role(cfg, "utility"),
-        temperature=0.4,
+        temperature=t, top_p=p,
     )
 
 

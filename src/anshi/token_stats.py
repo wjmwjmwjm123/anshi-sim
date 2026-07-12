@@ -1,4 +1,4 @@
-"""Token 记账（仿照 ming_sim/token_stats.py 模式）。L2。
+"""Token 记账（线程安全）。L2。
 
 记录每次 LLM 调用的 prompt/completion tokens，供 API 查询。
 """

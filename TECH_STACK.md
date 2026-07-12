@@ -1,191 +1,144 @@
-# 技术栈与应用层文档
+# 安史之乱 · 技术栈与架构
 
-## 概览
+## 总体架构
 
-安史之乱·中唐续命（anshi-sim）是一个基于 LLM 的历史策略模拟游戏。玩家扮演唐朝皇帝，通过召见大臣、廷议、拟诏、密诏等方式推动局势发展。
+```
+前端 (React SPA)
+  ↕ SSE / REST
+后端 (FastAPI)
+  ├── 路由层 (routes/)     ← HTTP 接口
+  ├── Agent 工厂 (agents.py) ← 角色工厂 + 执行器
+  ├── AI 层 (ai.py)        ← LLM 调用 + 供应商适配
+  ├── 提示词 (prompts.py)  ← 集中管理
+  └── 规则层 (core/management/campaign/strategy) ← 确定性结算
+```
 
-## 技术栈
+## 技术选型
 
-### 后端
+| 层 | 技术 | 理由 |
+|---|---|---|
+| 前端 | React 19 + Vite | 快速原型，单文件 SPA |
+| 后端 | FastAPI + Pydantic | 异步 SSE、类型校验 |
+| 存储 | SQLite WAL | 零配置、单文件存档 |
+| LLM | OpenAI 兼容 API | 供应商无关 |
+| 流式 | httpx SSE + Server-Sent Events | 真流式，逐字输出 |
 
-| 技术 | 用途 |
+## AI 层设计
+
+### Agent 工厂模式
+
+每种 LLM 角色有独立的工厂函数，返回 `CouncilAgent` dataclass：
+
+```python
+@dataclass
+class CouncilAgent:
+    name: str
+    role: str           # 决定用哪个 model 配置
+    system_prompt: str
+    config: LLMConfig
+    temperature: float
+    top_p: float | None
+```
+
+工厂函数：
+- `create_minister_agent()` — 廷议大臣
+- `create_secretary_agent()` — 中书舍人纪要
+- `create_character_agent()` — 人物奏对
+- `create_court_script_agent()` — 廷议剧本（单次调用）
+- `create_simulator_agent()` — 世界推演
+- `create_gazette_agent()` — 邸报
+- `create_narrator_agent()` — 史官叙事
+
+### 执行器
+
+- `run_agent()` — 非流式，返回完整文本
+- `run_agent_stream()` — 真流式，yield 每个 delta
+- `run_agent_json()` — JSON 执行，带多级修复
+
+### 模型配置（三角色）
+
+```python
+# chat       → 人物扮演、廷议（默认模型）
+# simulation → 回合推演、世界模拟（可配更强模型）
+# utility    → 文书润色、纪要（可配更快模型）
+```
+
+每个角色可独立配置 API key、base_url、model。`for_role()` 让 simulator/extractor 走 advanced model。
+
+### 供应商适配
+
+自动检测 base_url 中的供应商标识，注入特定参数：
+
+```python
+def provider_extra_body(base_url: str) -> dict | None:
+    # DeepSeek → 关闭思考模式
+    # DashScope → 关闭思考模式
+    # MiniMax → 关闭思考模式
+    # 其他 → None（无额外参数）
+```
+
+### 温度/采样参数
+
+每种角色有默认采样参数，定义在 `_ROLE_SAMPLING` 字典中：
+
+| 角色 | temperature | top_p |
+|---|---|---|
+| minister | 0.65 | 0.9 |
+| secretary | 0.4 | 0.5 |
+| character | 0.7 | 0.9 |
+| simulator | 0.5 | 0.5 |
+| court_script | 0.75 | 0.9 |
+| gazette | 0.4 | 0.5 |
+
+## SSE 事件协议
+
+### 廷议流 `/api/council/stream`
+
+```
+data: {"type": "council_start", "topic": "...", "round": 1}
+data: {"type": "speech_start", "name": "哥舒翰", "round": 1}
+data: {"type": "speech_delta", "name": "哥舒翰", "delta": "臣"}
+data: {"type": "speech_delta", "name": "哥舒翰", "delta": "以为"}
+data: {"type": "speech_end", "name": "哥舒翰", "reply": "臣以为当固守...", "round": 1}
+...
+data: {"type": "minutes", "round": 1, "text": "群臣各陈己见..."}
+data: {"type": "emperor_options", "is_final": false}
+data: {"done": true}
+```
+
+### 结算流 `/api/resolve/stream`
+
+```
+data: {"type": "snapshot", "data": {...}}     # 完整结算快照
+data: {"type": "gazette_start"}
+data: {"type": "gazette_delta", "delta": "至"}
+data: {"type": "gazette_delta", "delta": "德"}
+...
+data: {"type": "gazette_end", "gazette": "至德二载六月..."}
+data: {"done": true}
+```
+
+## 提示词管理
+
+所有提示词集中在 `prompts.py`，不硬编码在 agent 或路由中：
+
+| 提示词 | 用途 |
 |---|---|
-| Python 3.13+ | 运行时 |
-| FastAPI | HTTP API 框架 |
-| Pydantic v2 | 请求/响应数据校验 |
-| httpx | HTTP 客户端（LLM 流式调用） |
-| uvicorn | ASGI 服务器 |
-| SQLite（via GameStore） | 本地存档、管理状态、回合记录 |
+| `MINISTER_SYSTEM` | 廷议大臣发言规则 |
+| `COURT_SCRIPT_SYSTEM` | 廷议剧本编排规则 |
+| `SECRETARY_SYSTEM` | 中书舍人纪要规则 |
+| `CHARACTER_SYSTEM` | 人物奏对规则 |
+| `NARRATOR_SYSTEM` | 史官叙事规则 |
+| `WORLD_PROPOSAL_SYSTEM` | 世界推演规则（含邸报） |
+| `GAZETTE_SYSTEM` | 邸报叙事风格 |
 
-### 前端
+## 路由模块
 
-| 技术 | 用途 |
+`main.py` 只做初始化和路由挂载，具体端点按职责拆分：
+
+| 模块 | 路由 |
 |---|---|
-| React 18 | UI 框架 |
-| TypeScript | 类型安全 |
-| Vite | 构建工具 |
-| Lucide React | 图标库 |
-| SSE（Server-Sent Events） | 廷议流式推送 |
-
-### LLM 集成
-
-| 模型角色 | 环境变量前缀 | 用途 |
-|---|---|---|
-| 人物议政（chat） | `CHAT_*` / `OPENAI_*` | 大臣奏对、廷议发言 |
-| 回合推演（simulation） | `SIMULATION_*` | 世界推演、史官叙事 |
-| 文书与记忆（utility） | `UTILITY_*` | 诏书润色、廷议纪要 |
-
-支持的 LLM 提供商：OpenAI 兼容接口（含火山引擎 Ark、LongCat 等）。
-
-## 应用层架构
-
-### Agent 工厂模式（仿照 ming_sim）
-
-```
-src/anshi/
-├── agents.py      # Agent 工厂（CouncilAgent + 工厂函数 + 执行函数）
-├── prompts.py     # 提示词集中管理（所有 system/user prompt 模板）
-├── ai.py          # LLM 调用层（chat_completion / stream_chat_completion）
-├── token_stats.py # Token 记账
-└── ...
-```
-
-**Agent 工厂**：每个 LLM 角色有独立的工厂函数，返回配置好的 `CouncilAgent` 对象：
-
-```python
-agent = create_minister_agent(character, topic, context, ...)
-agent = create_secretary_agent(topic, speeches, ...)
-agent = create_character_agent(character, topic, scene="court", ...)
-agent = create_narrator_agent()
-agent = create_simulator_agent()
-```
-
-**执行函数**：
-
-| 函数 | 模式 | 用途 |
-|---|---|---|
-| `run_agent` | 非流式 | 返回完整文本，带 fallback |
-| `run_agent_stream` | 真流式 | yield 每个 delta 片段，逐字推送 |
-| `run_agent_json` | 非流式 + JSON 修复 | 返回解析后的 JSON，带 sanitizer 兜底 |
-
-**模型派生**（`for_role`）：
-
-```python
-# 推演/打分角色走 advanced_model（更强的模型），其余走 main model
-cfg = for_role(llm_config, "simulator")  # → advanced_model
-cfg = for_role(llm_config, "minister")   # → main model
-```
-
-### 廷议流程
-
-```
-1. 前端发起 POST /api/council/stream
-2. 后端依次为每位大臣创建 minister_agent
-3. 调用 run_agent_stream 真流式生成发言
-4. SSE 事件推送：
-   - speech_start  → 前端创建占位元素
-   - speech_delta  → 前端逐字追加文本
-   - speech_end    → 前端显示完整发言 + 态度标签
-5. 全部发言后，secretary_agent 生成《会议纪要》
-6. 第二轮：每位大臣收到纪要 + 上一位发言 + 皇帝谕旨
-7. 最终纪要 → 皇帝决策面板
-```
-
-### SSE 事件类型
-
-| 事件 | 字段 | 说明 |
-|---|---|---|
-| `speech_start` | `character_id`, `name`, `round` | 大臣开始发言 |
-| `speech_delta` | `character_id`, `delta` | 流式文本片段 |
-| `speech_end` | `character_id`, `name`, `reply`, `stance`, `round` | 发言结束 |
-| `minutes` | `round`, `text` | 中书舍人纪要 |
-| `emperor_options` | — | 显示皇帝决策面板 |
-| `done` | — | 本轮结束 |
-
-### Token 记账
-
-每次 LLM 调用自动记录 token 用量（需 provider 返回 usage 字段）：
-
-```
-GET /api/token-stats → { total_calls, total_tokens, recent: [...] }
-```
-
-### LLMConfig 扩展
-
-```python
-@dataclass(frozen=True)
-class LLMConfig:
-    api_key: str
-    base_url: str
-    model: str
-    timeout: float = 20.0
-    advanced_model: str = ""       # 推演/打分专用更强模型
-    advanced_base_url: str = ""    # advanced 角色专用网关
-    advanced_api_key: str = ""     # advanced 角色专用 key
-```
-
-环境变量：`ADVANCED_MODEL`、`ADVANCED_BASE_URL`、`ADVANCED_API_KEY`。
-
-### JSON 修复（sanitize_json）
-
-LLM 输出可能包含 markdown fence、控制字符、不完整 JSON。`sanitize_json` 依次尝试：
-
-1. 原文直解
-2. 去除 ```json fence 后解析
-3. 截取最外层 `{...}` + 去控制字符后解析
-4. 截取最外层 `[...]` + 去控制字符后解析
-
-### 错误处理
-
-- LLM 调用失败 → 使用 fallback 文本（中文模板），不阻断游戏
-- 流式调用中断 → 已推送的片段保留，发言标记为完成
-- 网络超时 → 静默降级，前端显示模板文本
-
-## 与 ming_sim 的对应关系
-
-| ming_sim | anshi-sim | 说明 |
-|---|---|---|
-| `agno.Agent` | `CouncilAgent` | 轻量替代，不依赖 agno |
-| `create_season_simulator_agent` | `create_simulator_agent` | 工厂函数 |
-| `run_agent_text` | `run_agent` | 非流式执行 |
-| `run_agent_stream_text` | `run_agent_stream` | 真流式执行 |
-| `parse_agent_json` | `sanitize_json` | JSON 修复 |
-| `GameContent` | `prompts.py` | 提示词集中管理 |
-| `for_role` | `for_role` | 模型按角色派生 |
-| `record_stream_metrics` | `token_stats.record` | Token 记账 |
-| `LLMUnavailable` | 直接异常冒泡 | 错误处理 |
-
-## 运行
-
-```bash
-# 安装依赖
-pip install -e .
-
-# 启动后端
-python -m apps.api.run
-
-# 启动前端（开发模式）
-cd apps/web && npm run dev
-```
-
-## 环境变量
-
-```bash
-# 人物议政模型
-CHAT_API_KEY=sk-...
-CHAT_BASE_URL=https://api.openai.com/v1
-CHAT_MODEL=gpt-4o-mini
-
-# 回合推演模型（可选，更强的模型）
-SIMULATION_API_KEY=sk-...
-SIMULATION_MODEL=gpt-4o
-
-# 文书模型
-UTILITY_API_KEY=sk-...
-UTILITY_MODEL=gpt-4o-mini
-
-# 高级模型（推演/打分专用，可选）
-ADVANCED_MODEL=deepseek-reasoner
-ADVANCED_BASE_URL=https://api.deepseek.com/v1
-ADVANCED_API_KEY=sk-...
-```
+| `routes/council.py` | audience, council, council/stream, secret-edicts |
+| `routes/decree.py` | decrees, directives, events, army/move |
+| `routes/game.py` | turn, resolve, resolve/stream, saves, snapshot, policies |
+| `routes/settings.py` | model-config, token-stats, health |

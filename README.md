@@ -2,161 +2,89 @@
 
 > 从天宝十五载潼关危局开始，用对话、诏书与军政决策，尝试把一台正在失序的唐朝国家机器重新运转起来。
 
-![紫宸殿朝堂](apps/web/public/assets/backgrounds/court-hall.webp)
-
 这是一个联网的、对话驱动的历史策略游戏原型。玩家扮演大唐最高决策者：召见人物、组织群臣议政、暂存御前裁决、自由拟写诏书，再把军令、钱粮、人事与地方局势推进到下一回合。
 
-它的重点不是让模型替玩家写一段历史小说，而是让 AI 进入一个有边界的游戏循环：**模型负责人物表达与世界反应，本地规则负责权威状态与结算。**
+**模型负责人物表达与世界反应，本地规则负责权威状态与结算。**
 
 ## 当前内容
 
-| 内容 | 当前规模 |
+| 内容 | 规模 |
 | --- | ---: |
 | 战役主线 | 5 幕，756—763 |
-| 可召见人物与立绘 | 42 |
+| 可召见人物 | 42 |
 | 战略地区 | 16 |
 | 跨幕军队 | 13 |
-| 战役事件节点 | 18 |
-| 场景背景 | 9 |
-| 事件插图 | 16 |
-| 自动化测试 | 37 项 |
+| 战役事件 | 18 |
+| 自动化测试 | 64 项 |
 
-<p align="center">
-  <img src="apps/web/public/assets/backgrounds/tang-terrain.webp" alt="安史之乱战略地形图，标注唐军、燕军与争夺地区" width="860">
-</p>
+## 核心玩法
 
-![潼关战场](apps/web/public/assets/events/lingbao_battle.webp)
-
-## 玩家实际在玩什么
-
-```mermaid
-flowchart LR
-  A[查看天下与军报] --> B[召见人物或群臣议政]
-  B --> C[拟写诏书]
-  C --> D[中书核议]
-  D --> E[暂存裁决与行动事项]
-  E --> F[颁诏并推进回合]
-  F --> G[军政结算、世界反应、纪事与存档]
-  G --> A
+```
+查看天下与军报 → 召见人物或群臣议政 → 拟写诏书 → 中书核议 → 暂存裁决 → 颁诏并推进回合 → 军政结算、世界推演、邸报与存档
 ```
 
-### 对话不是装饰
+### 廷议（单次 LLM 调用）
+
+廷议采用单次 LLM 调用生成整场对话，用 `<<<臣:姓名>>>` 分隔符切换发言人。一次网络往返，所有大臣的发言、交锋、反驳由模型统一编排。
+
+### 奏对
 
 - **朝堂**：人物顾及官位、名分、派系与在场同僚。
 - **密诏**：人物可以谈不宜公开的判断，关系与承诺会跨回合保留。
 - **远奏**：军镇人物只能基于地方见闻回答，也会承认消息迟滞。
-- **群议**：后发言者能读取前臣意见，在人设和利益约束下附和或反驳。
 
-<p align="center">
-  <img src="apps/web/public/assets/backgrounds/court-hall.webp" alt="紫宸殿公开朝堂" width="32%">
-  <img src="apps/web/public/assets/backgrounds/secret-chamber.webp" alt="密诏召对" width="32%">
-  <img src="apps/web/public/assets/backgrounds/remote-memorial.webp" alt="军镇远奏" width="32%">
-</p>
+### 诏书与裁决
 
-<p align="center">
-  <img src="apps/web/public/assets/backgrounds/army-command.webp" alt="军令台深色背景" width="49%">
-  <img src="apps/web/public/assets/backgrounds/policy-hall.webp" alt="国策厅深色背景" width="49%">
-</p>
+玩家自由写下旨意后，文书模型会先把它润色为唐廷风格圣旨，再输出 JSON 行动候选。程序校验行动类别、目标和投入范围；通过核议的行动与已暂存的御前裁决，在"颁诏并推进"时统一结算。
 
-### 诏书与裁决不是点一下就生效
+### 回合结算与邸报
 
-玩家自由写下旨意后，文书模型会先把它润色为唐廷风格圣旨，再输出 JSON 行动候选。程序校验行动类别、目标和投入范围；通过核议的行动与已暂存的御前裁决，在“颁诏并推进”时统一结算。
-
-这意味着玩家可以先选定裁决，再继续召见人物、拟写诏书和调整方案，而不是被一个事件弹窗强行推进回合。
-
-<p align="center">
-  <img src="apps/web/public/assets/ui/edict-paper.webp" alt="御笔拟诏纸面" width="49%">
-  <img src="apps/web/public/assets/ui/decision-scroll.webp" alt="御前裁决纸面" width="49%">
-</p>
+每回合结算包含：硬规则结算（兵力、钱粮、路线、战斗）→ 推演模型生成软世界反应（民心、士气、NPC 动向）→ 自动生成邸报。邸报以小说般的叙事笔法，串联本回合的诏令施行、军事动向与天下大势。
 
 ## 三类模型，三种职责
 
-| 职责 | 用途 | 输入 | 输出 | 明确不能做什么 |
-| --- | --- | --- | --- | --- |
-| 人物议政模型 | 召对、密诏、远奏、朝议 | 人设、场景、局势、关系、前序发言 | 角色台词 | 修改数值、替玩家下令 |
-| 回合推演模型 | 产生软世界反应 | 硬规则结算后的全局状态 | 受约束 JSON 提案、NPC 动向、事件伏线 | 改兵力、钱粮、日期、章节、硬战果 |
-| 文书与记忆模型 | 拟诏、拆解行动、整理文书 | 自由诏意、当前可用目标 | 圣旨正文、JSON 行动候选 | 虚构目标、越权执行 |
+| 职责 | 用途 | 输出 |
+| --- | --- | --- |
+| 人物议政 | 召对、密诏、远奏、朝议 | 角色台词 |
+| 回合推演 | 软世界反应 + 邸报生成 | JSON 提案 + 邸报叙事 |
+| 文书与记忆 | 拟诏、拆解行动、摘要 | 圣旨正文、JSON 行动候选 |
 
-模型职责可以分别配置供应商、接口和模型名称。项目使用 OpenAI 兼容接口，支持 OpenAI、LongCat、DeepSeek 等兼容服务。
+每个角色可独立配置供应商、接口和模型。支持 OpenAI 兼容协议，自动适配 DeepSeek / DashScope / MiniMax 等供应商（自动关闭思考模式）。
 
-## 为什么还需要推演模型
+## 推演架构
 
-只做角色聊天，世界不会因玩家的选择而持续变化；把存档完全交给模型，又会失去可解释性。
-
-因此本项目采用“硬规则先行，模型受限提案，程序逐项审核”的结构：
-
-```mermaid
-flowchart LR
-  R[确定性规则
-兵力、钱粮、路线、战斗] --> P[推演模型
-JSON 提案]
-  P --> V[本地校验器
-白名单、目标、幅度]
-  V --> S[允许写入
-民心、动乱、士气、补给、忠诚]
-  V --> X[拒绝写入
-越权、无效、超限变化]
-  S --> H[史官纪事与自动存档]
 ```
-
-推演模型允许提出地区民心、动乱、城防，军队士气与补给，事项压力与进度，人物忠诚、局势进度方向、NPC 动向和事件伏线；局势方向会经过置信度、幅度和完成/崩坏阈值校验后才产生帝国修正。它不能触碰现金、粮仓、兵力、日期、章节或硬规则战果。
+确定性规则（兵力、钱粮、路线、战斗）
+  → 推演模型（JSON 提案 + 邸报叙事）
+    → 本地校验器（白名单、目标、幅度）
+      → 允许写入（民心、动乱、士气、补给、忠诚）
+      → 拒绝写入（越权、无效、超限变化）
+        → 史官纪事与自动存档
+```
 
 ## 功能一览
 
 - 左右朝班的紫宸殿朝堂，覆盖三省六部与主要军政人物。
-- 单独召见、密诏与远奏，人物关系、承诺、聊天记录和长期记忆会持续保存。
-- 多人廷议，角色可基于前序发言展开再辩。
+- 单独召见、密诏与远奏，人物关系、承诺与聊天记录跨回合保留。
+- 多人廷议（单次 LLM 调用），角色基于前序发言展开交锋。
 - 自由拟诏，文书模型生成圣旨并拆解为可校验的朝堂行动。
 - 御前裁决可暂存，与诏令一起进入统一回合结算。
-- 16 地区点选地图、军队调动、会战、围城、补给与跨章债务。
-- “天下”与“军情”分离：天下显示 16 个州镇的控制方、民心与动乱；军情只显示当前战区和军旗。
-- 军令先入队，目的地明确，在“颁诏并推进”时才执行；行军结果进入回合推演与战报。
-- 局势进度由推演模型每回合综合判断，完成或崩坏会写入帝国修正；国策树每回合最多选择一项，完成后提供持续 buff。
-- 奏报中心按军报、推演、奏对和事件整理真实回合记录，不再只是事件候选列表。
+- 16 地区地图、军队调动、会战、围城、补给与跨章债务。
+- 局势进度由推演模型每回合综合判断，完成或崩坏写入帝国修正。
+- 国策树每回合最多选择一项，完成后提供持续 buff。
+- 邸报以小说叙事风格生成，流式逐字输出。
 - 五幕战役、事件时钟、史料置信标识、自动存档和手动存读档。
-- 42 张人物立绘、11 张场景背景、16 张事件图、军令图标切片和诏书/裁决纸面 UI。
-
-<p align="center">
-  <img src="apps/web/public/assets/portraits/xuanzong.webp" alt="唐玄宗立绘" width="15%">
-  <img src="apps/web/public/assets/portraits/geshu_han.webp" alt="哥舒翰立绘" width="15%">
-  <img src="apps/web/public/assets/portraits/yang_guozhong.webp" alt="杨国忠立绘" width="15%">
-  <img src="apps/web/public/assets/portraits/guo_ziyi.webp" alt="郭子仪立绘" width="15%">
-  <img src="apps/web/public/assets/portraits/an_lushan.webp" alt="安禄山立绘" width="15%">
-  <img src="apps/web/public/assets/portraits/li_heng.webp" alt="李亨立绘" width="15%">
-</p>
-
-<p align="center">
-  <img src="apps/web/public/assets/events/changan_escape.webp" alt="玄宗西幸事件图" width="32%">
-  <img src="apps/web/public/assets/events/shi_siming_assassination.webp" alt="史思明被弑事件图" width="32%">
-  <img src="apps/web/public/assets/events/tibet_changan_threat.webp" alt="吐蕃逼近关中事件图" width="32%">
-</p>
 
 ## 技术栈
 
 - **前端**：React 19、TypeScript、Vite
 - **后端**：Python 3.13、FastAPI、Pydantic
 - **规则层**：确定性军政结算、战役时钟、路线与战争策略
-- **存档**：SQLite WAL，保存国家状态、战役进度、会话记忆、行动队列与策略状态
-- **模型接入**：标准 OpenAI-compatible Chat Completions API
-- **美术**：Seedream 5.0 生成后经人工筛选、尺寸归一化和 WebP 压缩接入
+- **AI 层**：Agent 工厂模式、流式 SSE、供应商自动适配、JSON 多级修复
+- **存档**：SQLite WAL
+- **模型接入**：OpenAI 兼容 Chat Completions API
 
 ## 快速启动
-
-### 一键启动（Windows PowerShell）
-
-首次运行会安装前后端依赖：
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\start.ps1 -Install
-```
-
-之后直接运行：
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\start.ps1
-```
-
-脚本会启动 API、前端并打开 `http://127.0.0.1:5173`。加上 `-NoBrowser` 可只启动服务。
 
 ### 前置条件
 
@@ -165,89 +93,73 @@ powershell -ExecutionPolicy Bypass -File .\start.ps1
 
 ### 1. 安装依赖
 
-```powershell
+```bash
 python -m pip install -e .
-
-cd apps/web
-npm install
-cd ../..
+cd apps/web && npm install && cd ../..
 ```
 
-### 2. 启动后端
+### 2. 配置模型
 
-```powershell
-python apps/api/run.py
+在项目根目录创建 `.env` 文件：
+
+```
+OPENAI_API_KEY=your-key
+OPENAI_BASE_URL=https://api.example.com/v1
+OPENAI_MODEL=your-model
 ```
 
-后端运行在 `http://127.0.0.1:8000`。
+也可在游戏右上角"模型分工"界面分别设置三类模型的供应商和密钥。
 
-### 3. 启动前端
+### 3. 启动
 
-另开一个 PowerShell：
+```bash
+# 后端
+python -m uvicorn apps.api.main:create_app --factory --port 8000
 
-```powershell
-cd apps/web
-npm run dev
+# 前端（另开终端）
+cd apps/web && npm run dev
 ```
 
-打开 [http://127.0.0.1:5173](http://127.0.0.1:5173)。
+打开 http://localhost:5173
 
-## 配置联网模型
-
-可在游戏右上角的“模型分工”界面分别设置三类模型；密钥只保留在当前后端进程，API 不会回传密钥。
-
-也可用环境变量配置。ARK_API_KEY 用于 Seedream 生图；聊天职责还需要对应的模型名，不能把图片模型直接当作聊天模型。若要让三类聊天职责共用 Ark，可同时设置 ARK_BASE_URL 和 ARK_MODEL：
+Windows 一键启动：
 
 ```powershell
-$env:CHAT_API_KEY='...'
-$env:CHAT_BASE_URL='https://api.example.com/v1'
-$env:CHAT_MODEL='your-chat-model'
-
-$env:SIMULATION_API_KEY='...'
-$env:SIMULATION_BASE_URL='https://api.example.com/v1'
-$env:SIMULATION_MODEL='your-reasoning-model'
-
-$env:UTILITY_API_KEY='...'
-$env:UTILITY_BASE_URL='https://api.example.com/v1'
-$env:UTILITY_MODEL='your-fast-model'
+powershell -ExecutionPolicy Bypass -File .\start.ps1 -Install
 ```
 
-统一回退配置也可使用 `OPENAI_API_KEY`、`OPENAI_BASE_URL`、`OPENAI_MODEL`；只配置 `LONGCAT_API_KEY` 时，会自动使用 LongCat 的默认兼容接口。
+## 测试
 
-未配置文书模型时，诏书不会由本地关键词规则擅自拆成行动；这样可以避免“看起来像命令”的文本未经模型理解就改变国家状态。
-
-## 验收路径
-
-1. 开始新游戏，阅读潼关危局的时代背景与短期任务。
-2. 在“朝堂”分别召见不同机构的人物，切换朝堂、密诏、远奏，观察语境差异。
-3. 点击右上角“议”，选两至六人议政，观察后发言者如何回应前臣意见。
-4. 打开“御前裁决”，选择一个方案后关闭弹窗；确认回合没有立刻推进，按钮变为“颁诏并裁决”。
-5. 点击“拟诏”，写下包含对象、意图与投入的旨意；在“中书核议”中查看圣旨与模型 JSON 行动候选。
-6. 确认行动后点击“颁诏并裁决”，到“史册”查看规则结算、世界推演、人物动向与纪事。
-7. 返回主菜单，验证自动存档、另存和载入。
-
-## 测试与构建
-
-```powershell
+```bash
 python -m pytest -q
-
-cd apps/web
-npm run build
 ```
 
-当前结果：`37 passed`，前端生产构建通过。
+当前：64 passed。
 
-## 开发过程与文档
+## 项目结构
 
-初始可运行原型由“一日调研 + 一日构建”完成，之后持续迭代内容、模型边界、视觉资产和交互流程。Codex 主 Agent 用于任务拆解、集成与测试；并行子 Agent 用于调研、数值/内容、运行时与视觉工作。这里的多 Agent 是开发协作方式，不把它夸大为游戏内无人监管的自主社会。
-
-- [项目介绍与架构案例页](docs/介绍文档.html)
-- [调研数据审计](docs/audit/research-data-audit.md)
-- [历史调研综合](docs/design/historical_research_synthesis.md)
-- [目标架构](docs/design/architecture.md)
-- [数值规格](docs/design/numerical_design.md)
-- [项目规划草案](docs/design/project_plan_draft.md)
+```
+anshi-sim/
+├── src/anshi/           # 核心逻辑层
+│   ├── ai.py            # LLM 调用、供应商适配、JSON 修复
+│   ├── agents.py        # Agent 工厂（7 种角色）
+│   ├── prompts.py       # 提示词集中管理
+│   ├── token_stats.py   # Token 用量追踪
+│   ├── core.py          # 确定性回合结算
+│   ├── management.py    # 国家管理状态
+│   ├── campaign.py      # 战役时钟与事件
+│   ├── strategy.py      # 军事路线与战斗
+│   ├── situations.py    # 局势进度与国策
+│   └── storage.py       # SQLite 存档
+├── apps/
+│   ├── api/             # FastAPI 后端
+│   │   ├── main.py      # 初始化与路由挂载
+│   │   └── routes/      # 路由模块（council/decree/game/settings）
+│   └── web/             # React 前端
+│       └── src/main.tsx # 单文件 SPA
+└── content/             # 剧本、人物、事件数据
+```
 
 ## 当前边界
 
-这是一个可运行的策略游戏原型，不宣称用模型替代历史研究或游戏规则。历史任职、数值和事件均有史实锚定、争议、制作估算或设计标签；模型输出必须经过规则层验证。后续重点是补足后期章节事件、美术与更细的地区/军镇互动，并根据玩家实测继续调整数值节奏。
+这是一个可运行的策略游戏原型。历史任职、数值和事件均有史实锚定、争议、制作估算或设计标签；模型输出必须经过规则层验证。

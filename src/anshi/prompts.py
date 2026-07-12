@@ -1,4 +1,4 @@
-"""提示词集中管理。仿照 ming_sim/content.py 的模式，所有 agent 提示词在此定义。"""
+"""提示词集中管理。所有 agent 提示词在此定义。"""
 
 from __future__ import annotations
 

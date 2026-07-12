@@ -27,7 +27,7 @@ class LLMConfig:
     advanced_api_key: str = ""
 
 
-# 推演/打分角色走 advanced model，其余走 main model（与 ming_sim/llm_config.py 一致）。
+# 推演/打分角色走 advanced model，其余走 main model。
 _ADVANCED_ROLES = frozenset({"simulator", "extractor"})
 
 
@@ -108,7 +108,7 @@ def _endpoint(cfg: LLMConfig) -> str:
     return ep
 
 
-# --- 供应商适配（搬自 ming_sim/llm_config.py） ---
+# --- 供应商适配 ---
 
 _PROVIDER_EXTRA: dict[str, dict] = {
     "deepseek": {"thinking": {"type": "disabled"}},
@@ -393,7 +393,7 @@ def _turn_fallback(data: object) -> str:
 
 
 def sanitize_json(raw: str) -> dict | list | None:
-    """从 LLM 输出中提取合法 JSON。仿照 ming_sim parse_agent_json + sanitizer。
+    """从 LLM 输出中提取合法 JSON。多级降级解析。
 
     依次尝试：原文解析 → 截取首尾花括号 → 去除控制字符 → 去除 json fence。
     """

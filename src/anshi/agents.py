@@ -1,4 +1,4 @@
-"""Agent 工厂与执行（仿照 ming_sim/agents.py 模式）。L5。
+"""Agent 工厂与执行。L5。
 
 每个 agent 角色有：
 - 工厂函数：返回 CouncilAgent（system prompt + config + role）
@@ -52,7 +52,7 @@ def _sampling_for(role: str, temperature: float | None = None, top_p: float | No
 
 @dataclass
 class CouncilAgent:
-    """廷议 agent 配置（仿照 ming_sim Agent，但不依赖 agno）。"""
+    """廷议 agent 配置（纯 Python dataclass，无第三方依赖）。"""
     name: str
     role: str  # "minister" | "secretary" | "character" | "narrator" | "simulator" | "court_script" | "gazette"
     system_prompt: str
@@ -198,7 +198,7 @@ def run_agent(
     with_status: bool = False,
     tag: str = "",
 ) -> str | tuple[str, bool]:
-    """执行 agent（非流式），返回文本。仿照 ming_sim run_agent_text。"""
+    """执行 agent（非流式），返回文本。非流式执行。"""
     if not agent.config.api_key:
         return (fallback, False) if with_status else fallback
     try:
@@ -217,7 +217,7 @@ def run_agent_stream(
     on_chunk: Callable[[str], None] | None = None,
     tag: str = "",
 ) -> Generator[str, None, None]:
-    """执行 agent（真流式），yield 每个 delta 片段。仿照 ming_sim run_agent_stream_text。
+    """执行 agent（真流式），yield 每个 delta 片段。真流式执行。
 
     用法：
         for chunk in run_agent_stream(agent, prompt):
@@ -246,7 +246,7 @@ def run_agent_json(
     with_status: bool = False,
     tag: str = "",
 ) -> tuple[dict | list | None, bool]:
-    """执行 agent 并解析 JSON 输出。仿照 ming_sim parse_agent_json + sanitizer 兜底。
+    """执行 agent 并解析 JSON 输出。带 JSON 修复兜底。
 
     1. 调用 LLM
     2. sanitize_json 提取 JSON

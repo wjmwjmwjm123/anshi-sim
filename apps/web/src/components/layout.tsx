@@ -1,0 +1,107 @@
+import { LogOut, MessagesSquare, RotateCcw, Save, Settings } from "lucide-react";
+import type { Tab } from "../types";
+import { Metric } from "./shared";
+import { nav } from "../constants";
+
+export function TopBar({
+  state,
+  management,
+  progress,
+  modelSummary,
+  configuredCount,
+  onOpenModel,
+  onOpenCouncil,
+  onSave,
+  onExit,
+  onReset,
+}: {
+  state: any;
+  management: any;
+  progress: any;
+  modelSummary: string;
+  configuredCount: number;
+  onOpenModel: () => void;
+  onOpenCouncil: () => void;
+  onSave: () => void;
+  onExit: () => void;
+  onReset: () => void;
+}) {
+  return (
+    <header className="topbar">
+      <div className="brand">
+        <span className="seal">唐</span>
+        <div>
+          <h1>安史之乱</h1>
+          <p>中唐续命 · 国家军政中枢</p>
+        </div>
+      </div>
+      <div className="top-metrics">
+        <Metric label="皇威" value={state.central_prestige} />
+        <Metric label="军势" value={state.military_power} />
+        <Metric label="民心" value={state.popular_support} />
+        <Metric label="现银" value={management.finance.cash} />
+        <Metric label="粮储" value={management.finance.grain} />
+      </div>
+      <div className="date-block">
+        <span>{state.phase} · 第 {progress.total_turn} 回合 · {progress.year}年{progress.month}月</span>
+        <button className="model-status" onClick={onOpenModel} title={modelSummary}>
+          <Settings aria-hidden="true" />
+          <span>
+            <b>模型 {configuredCount}/3</b>
+            <small>{modelSummary}</small>
+          </span>
+        </button>
+      </div>
+      <div className="header-actions">
+        <button onClick={onOpenCouncil} title="召集群议" aria-label="召集群议">
+          <MessagesSquare />
+        </button>
+        <button onClick={onSave} title="另存游戏" aria-label="另存游戏">
+          <Save />
+        </button>
+        <button onClick={onExit} title="返回主菜单" aria-label="返回主菜单">
+          <LogOut />
+        </button>
+        <button onClick={onReset} title="重新开始" aria-label="重新开始">
+          <RotateCcw />
+        </button>
+      </div>
+    </header>
+  );
+}
+
+export function SideNav({
+  tab,
+  onTabChange,
+  urgentIssueCount,
+}: {
+  tab: Tab;
+  onTabChange: (tab: Tab) => void;
+  urgentIssueCount: number;
+}) {
+  return (
+    <nav className="side-nav">
+      {nav.map(({ id, label, Icon }) => (
+        <button key={id} className={tab === id ? "active" : ""} onClick={() => onTabChange(id)} title={label}>
+          <Icon size={18} />
+          <span>{label}</span>
+          {id === "memorials" && urgentIssueCount > 0 && <b>{urgentIssueCount}</b>}
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+export function CampaignRail({ acts, currentActId }: { acts: any[]; currentActId: string }) {
+  return (
+    <div className="campaign-rail">
+      {acts.map((a: any, i: number) => (
+        <div key={a.id} className={a.id === currentActId ? "current" : ""}>
+          <span>0{i + 1}</span>
+          <b>{a.title}</b>
+          <small>{a.date_range}</small>
+        </div>
+      ))}
+    </div>
+  );
+}

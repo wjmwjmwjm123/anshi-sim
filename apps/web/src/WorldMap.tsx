@@ -1,5 +1,6 @@
 import React from "react";
 import "./maps.css";
+import { cn } from "./constants";
 
 type WorldRegion = {
   id: string;
@@ -23,35 +24,6 @@ type WorldMapProps = {
   management: { regions: Record<string, RegionRuntime> };
   selected?: string;
   onSelect?: (id: string) => void;
-};
-
-const powerNames: Record<string, string> = {
-  tang_xuanzong: "玄宗朝廷",
-  tang_suzong: "肃宗朝廷",
-  yan_an: "安氏燕廷",
-  yan_shi: "史氏燕廷",
-  uighur: "回纥",
-  tibet: "吐蕃",
-  contested: "争夺中",
-};
-
-const statusNames: Record<string, string> = {
-  capital_under_threat: "京师告急",
-  fortified_front: "坚城前线",
-  ambush_corridor: "伏击狭道",
-  yan_forward_base: "燕军前进基地",
-  yan_capital: "燕廷都城",
-  yan_home_base: "燕军根本",
-  split_control: "分裂控制",
-  loyal_military_base: "忠唐军镇",
-  western_garrison: "西陲军镇",
-  tibetan_frontier: "吐蕃边境",
-  fallback_capital_candidate: "行在候选",
-  imperial_escape_route: "皇驾西行路线",
-  occupied_resistance: "敌后抵抗",
-  loyal_resistance: "忠唐抵抗",
-  jianghuai_gateway: "江淮门户",
-  canal_revenue_hub: "漕运财赋枢纽",
 };
 
 const labelOffsets: Record<string, [number, number]> = {
@@ -115,12 +87,12 @@ export default function WorldMap({ data, management, selected, onSelect }: World
               } as React.CSSProperties}
               onClick={() => onSelect?.(region.id)}
               aria-pressed={selected === region.id}
-              title={`${region.name} · ${powerNames[region.controller] || region.controller}`}
+              title={`${region.name} · ${cn(region.controller)}`}
             >
               <i />
               <span>
                 <b>{region.name}</b>
-                <small>{statusNames[region.status] || region.status}</small>
+                <small>{cn(region.status)}</small>
                 <em>民心 {runtime?.support ?? region.support ?? "-"} · 动乱 {runtime?.unrest ?? region.unrest ?? "-"}</em>
               </span>
             </button>

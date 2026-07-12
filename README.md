@@ -198,11 +198,59 @@ Windows 一键启动：`powershell -ExecutionPolicy Bypass -File .\start.ps1 -In
 
 ---
 
+## 项目结构
+
+```
+anshi-sim/
+├── apps/api/          # FastAPI 后端（路由、SSE、模型适配）
+├── apps/web/          # React 19 前端（Vite）
+│   ├── src/
+│   │   ├── api.ts           # 统一 HTTP / SSE 客户端
+│   │   ├── types.ts         # 前后端对齐的类型
+│   │   ├── constants.ts     # UI 常量与中文标签
+│   │   ├── App.tsx          # 游戏状态与页面装配
+│   │   ├── components/
+│   │   │   ├── shared.tsx   # 原子组件（Portrait、Metric 等）
+│   │   │   ├── layout.tsx   # 顶部栏、侧边导航、战役进度
+│   │   │   ├── screens.tsx  # 七个主屏幕
+│   │   │   └── panels.tsx   # 抽屉、弹窗、底部 Dock
+│   │   └── styles/*.css     # 主题与布局样式
+├── src/anshi/         # Python 核心（推演、规则、Agent 工厂）
+├── content/           # 剧本、地区、人物、事件数据
+├── tests/             # Python 测试
+└── tools/             # 素材生成与管理脚本
+```
+
+## 前端开发
+
+```bash
+cd apps/web
+npm install
+npm run dev      # http://127.0.0.1:5173
+npm run build    # 生产构建
+```
+
+前端通过 Vite proxy 访问 `127.0.0.1:8000` 的后端 API。所有 API 调用已收口到 `apps/web/src/api.ts`，游戏状态集中在 `App.tsx`。
+
+## 模型配置
+
+游戏使用三类模型角色，可在右上角模型状态入口分别配置：
+
+- **人物议政**：廷议、召见、密诏、远奏
+- **回合推演**：世界结算、邸报、局势判断
+- **文书与记忆**：诏书润色、奏折生成、长期记忆
+
+支持任意 OpenAI 兼容接口；后端会根据 base_url 自动注入供应商标识所需参数。
+
 ## 测试
 
 ```bash
+# Python 后端测试
 python -m pytest -q
 # 64 passed
+
+# 前端构建检查
+cd apps/web && npm run build
 ```
 
 ---

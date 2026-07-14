@@ -67,7 +67,7 @@ export default function App() {
     setError("");
     try {
       const controller = new AbortController();
-      let gazetteText = "";
+      let reportText = "";
       await api.resolve.stream(
         (d: any) => {
           if (d.requires_choice) {
@@ -84,15 +84,19 @@ export default function App() {
           }
           if (d.type === "snapshot") {
             setEventOpen(false);
-            setResolution({ ...d.data.data, narration: d.data.narration, campaign: d.data.campaign_result, gazette: "" });
+            setResolution({ ...d.data.data, narration: d.data.narration, report: "", reportTitle: "", campaign: d.data.campaign_result, gazette: d.data.gazette || "" });
             setTab("history");
           }
-          if (d.type === "gazette_delta") {
-            gazetteText += d.delta;
-            setResolution((prev: any) => (prev ? { ...prev, gazette: gazetteText } : prev));
+          if (d.type === "report_start") {
+            reportText = "";
+            setResolution((prev: any) => (prev ? { ...prev, report: "", reportTitle: d.title || "月末奏章" } : prev));
           }
-          if (d.type === "gazette_end") {
-            setResolution((prev: any) => (prev ? { ...prev, gazette: d.gazette } : prev));
+          if (d.type === "report_delta") {
+            reportText += d.delta;
+            setResolution((prev: any) => (prev ? { ...prev, report: reportText } : prev));
+          }
+          if (d.type === "report_end") {
+            setResolution((prev: any) => (prev ? { ...prev, report: d.report } : prev));
           }
         },
         controller.signal,

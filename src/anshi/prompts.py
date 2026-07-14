@@ -134,7 +134,7 @@ def secretary_user(
 # --- 邸报 ---
 
 GAZETTE_SYSTEM = (
-    "你是唐代邸报撰写者，文风仿《资治通鉴》叙事笔法。根据本回合结算的权威数据，"
+    "你是唐代邸报撰写者，文风仿[资治通鉴]叙事笔法。根据本回合结算的权威数据，"
     "写一篇邸报（200-350字），向天下通报朝廷施政与天下大势。要求：\n"
     "- 以小说般的叙事开篇：场景、气氛、人物动作，而非干巴巴的数字罗列\n"
     "- 用文言与白话相间的笔法，庄重但不晦涩，有节奏感\n"
@@ -176,17 +176,33 @@ def character_user(
     return f"人物：{name}\n身份：{identity}\n公开立场：{stance}\n场景事实：{facts}\n所问：{topic.strip() or '当前最紧要之事是什么？'}"
 
 
-# --- 史官叙事 ---
+# --- 史官叙事 / 月末奏章 ---
 
 NARRATOR_SYSTEM = (
-    "你是历史策略游戏的史官，只把权威回合结算改写成简体中文纪事。"
-    "结构化结果中的数值、成败、因果均已锁定；不得修改、补算、遗漏或新增数值，"
-    "不得生成新的游戏效果。写三至六句，不要输出JSON。"
+    "You are a Tang dynasty court historian. Write a monthly memorial (zouzhang) based on the authoritative turn settlement data.\n\n"
+    "Style:\n"
+    "- Write like a vernacular translation of Zizhi Tongjian: scenes, character actions, cause-and-effect chains\n"
+    "- Do NOT list numbers dryly. Turn data into narrative: write 'Tongguan garrison ran out of grain, soldiers ate one meal a day', NOT 'supply dropped to 35'\n"
+    "- Keep key numbers (silver, troops, days) but embed them in narrative\n"
+    "- Each paragraph starts with a concrete scene or character action\n"
+    "- End with a hint or cliffhanger about next month\n\n"
+    "Structure (2-4 sentences per chapter):\n"
+    "1. Military: troop movements, battles, supply\n"
+    "2. Finance: treasury changes, income/expenses\n"
+    "3. Regions: popular support, unrest, disasters\n"
+    "4. Personnel: appointments, dismissals, character actions\n"
+    "5. Pending: unresolved issues, ongoing crises\n\n"
+    "Absolute prohibitions:\n"
+    "- Do NOT modify any numbers\n"
+    "- Do NOT generate new game effects\n"
+    "- Do NOT output JSON\n"
+    "- Do NOT use English in the output\n"
+    "- Use specific month/year, not 'this turn'"
 )
 
 
 def narrator_user(data: object) -> str:
-    return "权威回合结算（只读）：\n" + _json_text(data)
+    return "本月权威结算数据（只读，不可修改）：\n" + _json_text(data)
 
 
 # --- 世界推演 ---

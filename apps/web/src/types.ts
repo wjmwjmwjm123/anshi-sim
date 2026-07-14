@@ -119,6 +119,9 @@ export type TurnResponse = any;
 
 export type ResolveEvent =
   | { type: "snapshot"; data: any }
+  | { type: "report_start"; title: string }
+  | { type: "report_delta"; delta: string }
+  | { type: "report_end"; report: string }
   | { type: "gazette_start" }
   | { type: "gazette_delta"; delta: string }
   | { type: "gazette_end"; gazette: string }

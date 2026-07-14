@@ -642,20 +642,33 @@ export function PolicyFocusViewRich({ snap, onSelect }: { snap: Snapshot; onSele
 }
 
 export function HistoryView({ state, resolution }: { state: any; resolution: any }) {
-  const isStreaming = resolution && resolution.gazette !== undefined && !resolution.gazette_end;
+  const isReportStreaming = resolution && resolution.report !== undefined && resolution.reportTitle && !resolution.report_end;
   return (
     <section>
       <SectionHead eyebrow="起居注与露布" title="本局史册" extra={<BookOpen size={18} />} />
       {resolution && (
         <div className="resolution-report">
           <h3>第 {resolution.turn} 回合结算</h3>
-          {resolution.gazette && (
-            <div className="gazette-card">
-              <b>📰 邸报</b>
-              <p>{resolution.gazette}{isStreaming && <span className="typing-cursor">▌</span>}</p>
+          {resolution.report ? (
+            <div className="report-card">
+              <b>{resolution.reportTitle || "月末奏章"}</b>
+              <div className="report-body">
+                {resolution.report.split("\n").map((line: string, i: number) => {
+                  if (!line.trim()) return <br key={i} />;
+                  if (/^[一二三四五六七八九十]+、/.test(line)) return <h4 key={i}>{line}</h4>;
+                  return <p key={i}>{line}</p>;
+                })}
+                {isReportStreaming && <span className="typing-cursor">▌</span>}
+              </div>
             </div>
-          )}
-          {resolution.narration && !resolution.gazette && <p>{resolution.narration}</p>}
+          ) : resolution.gazette ? (
+            <div className="gazette-card">
+              <b>邸报</b>
+              <p>{resolution.gazette}</p>
+            </div>
+          ) : resolution.narration ? (
+            <p>{resolution.narration}</p>
+          ) : null}
           {resolution.reports.map((report: any) => (
             <div key={report.directive_id} className={report.accepted ? "accepted" : "rejected"}>
               <b>{report.headline}</b>

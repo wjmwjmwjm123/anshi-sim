@@ -31,3 +31,8 @@
 .gazette-card{margin:16px 0;padding:18px 20px;background:linear-gradient(135deg,#f5f0e4,#efe6d0);border:1px solid #c4a96a;border-radius:6px;font-size:14px;line-height:2;color:#292a25}
 .gazette-card b{display:block;margin-bottom:8px;color:#7e3029;font:18px KaiTi,STKaiti,serif}
 .gazette-card p{text-indent:2em}
+.report-card{margin:16px 0;padding:24px 28px;background:linear-gradient(135deg,#f8f3e8,#f0e8d4);border:1px solid #b8a070;border-left:4px solid #86352d;font-size:15px;line-height:2.1;color:#1e2420}
+.report-card b{display:block;margin-bottom:12px;color:#7e3029;font:22px KaiTi,STKaiti,serif;letter-spacing:2px}
+.report-card h4{margin:18px 0 6px;color:#86352d;font-size:16px;font-weight:700;letter-spacing:1px}
+.report-card p{text-indent:2em;margin:0 0 8px}
+.report-card .typing-cursor{color:#8d342d}

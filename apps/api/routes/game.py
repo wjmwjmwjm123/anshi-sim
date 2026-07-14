@@ -391,21 +391,24 @@ def register(router_: APIRouter, game) -> None:
                         "management": asdict(game.management)}
 
         # --- 流式输出（锁外） ---
-        # 邸报已从推演结果中提取，逐字模拟流式输出
+        # 月末奏章（narration）是主内容，邸报是简短摘要
         if not gazette:
-            gazette = f"【邸报】{game.progress.year}年{game.progress.month}月，{ACT_NAMES[game.progress.act]}。{narration}"
+            # 从 narration 中提取第一段作为邸报摘要
+            first_para = narration.split("\n\n")[0] if narration else ""
+            gazette = f"【邸报】{game.progress.year}年{game.progress.month}月，{ACT_NAMES[game.progress.act]}。{first_para}"
         snapshot["gazette"] = gazette
+        snapshot["report"] = narration
 
         def generate():
             import time as _time
             yield f"data: {_json.dumps({'type': 'snapshot', 'data': snapshot}, ensure_ascii=False)}\n\n"
-            yield f"data: {_json.dumps({'type': 'gazette_start'}, ensure_ascii=False)}\n\n"
-            # ponytail: 逐字输出已生成的邸报，每2字一批，间隔50ms
-            for i in range(0, len(gazette), 2):
-                chunk = gazette[i:i+2]
-                yield f"data: {_json.dumps({'type': 'gazette_delta', 'delta': chunk}, ensure_ascii=False)}\n\n"
+            # 流式输出月末奏章
+            yield f"data: {_json.dumps({'type': 'report_start', 'title': f'{game.progress.year}年{game.progress.month}月 月末奏章'}, ensure_ascii=False)}\n\n"
+            for i in range(0, len(narration), 2):
+                chunk = narration[i:i+2]
+                yield f"data: {_json.dumps({'type': 'report_delta', 'delta': chunk}, ensure_ascii=False)}\n\n"
                 _time.sleep(0.05)
-            yield f"data: {_json.dumps({'type': 'gazette_end', 'gazette': gazette}, ensure_ascii=False)}\n\n"
+            yield f"data: {_json.dumps({'type': 'report_end', 'report': narration}, ensure_ascii=False)}\n\n"
             yield f"data: {_json.dumps({'done': True}, ensure_ascii=False)}\n\n"
 
         return StreamingResponse(generate(), media_type="text/event-stream")

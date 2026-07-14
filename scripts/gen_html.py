@@ -327,6 +327,115 @@ footer p{color:#aab5ac;font-size:12px;margin-top:8px}
 </div>
 </div></section>
 
+<!-- 推演架构 -->
+<section><div class="wrap">
+<div class="section-title">
+<span class="eyebrow">推演架构</span>
+<h2>AI说了不算，规则说了才算</h2>
+<p>这是整个游戏最关键的设计：AI可以提建议，但不能直接改数据。</p>
+</div>
+<div class="grid-2">
+<div>
+<h3>推演是怎么工作的？</h3>
+<div class="loop-step"><b>第1步：规则先算</b><p style="font-size:13px">兵力、钱粮、行军路线、战斗结果&mdash;&mdash;这些由程序硬算，AI碰不了。</p></div>
+<div class="loop-step"><b>第2步：AI用工具查盘面</b><p style="font-size:13px">推演模型可以调用9个查询工具：查地区、查军队、查国库、查人物、查事项。先查清再提建议，不凭印象猜测。</p></div>
+<div class="loop-step"><b>第3步：AI提建议</b><p style="font-size:13px">看完真实数据，提出民心、士气、人物动向等软变化建议。</p></div>
+<div class="loop-step"><b>第4步：程序审核</b><p style="font-size:13px">每个建议都要过白名单检查：目标对不对？幅度合不合理？</p></div>
+<div class="loop-step"><b>第5步：生成月末奏章</b><p style="font-size:13px">史官把结算数据写成白话史书风格的奏章，按军务/财政/地方/人事/待决五章组织。</p></div>
+</div>
+<div>
+<h3>AI能做什么、不能做什么</h3>
+<div style="margin-bottom:16px">
+<p style="font-size:13px;font-weight:700;margin-bottom:8px">可以提建议：</p>
+<span class="allow">地区民心 / 动乱 / 城防</span>
+<span class="allow">军队士气 / 补给</span>
+<span class="allow">事项压力 / 进度</span>
+<span class="allow">人物忠诚</span>
+<span class="allow">NPC动向</span>
+<span class="allow">事件伏线</span>
+</div>
+<div>
+<p style="font-size:13px;font-weight:700;margin-bottom:8px">绝对不能碰：</p>
+<span class="deny">现金、粮仓、兵力</span>
+<span class="deny">日期与章节进度</span>
+<span class="deny">战斗结果</span>
+<span class="deny">不存在的目标</span>
+</div>
+</div>
+</div>
+</div></section>
+
+<!-- Tool-use -->
+<section class="tint"><div class="wrap">
+<div class="section-title">
+<span class="eyebrow">Tool-Use</span>
+<h2>推演模型可以查盘面</h2>
+<p>不是把所有数据一股脑塞进prompt。推演模型有9个查询工具，按需查清再提建议。</p>
+</div>
+<div class="grid-3">
+<div class="card"><h3>查地区</h3><p style="font-size:13px">list_regions / inspect_region(id)<br>查看16个地区的民心、动乱、城防、控制者。</p></div>
+<div class="card"><h3>查军队</h3><p style="font-size:13px">list_armies / inspect_army(id)<br>查看各支军队的驻地、兵力、补给、士气。</p></div>
+<div class="card"><h3>查国库</h3><p style="font-size:13px">check_treasury<br>查看现银、粮储、月收支。</p></div>
+<div class="card"><h3>查人物</h3><p style="font-size:13px">list_characters / inspect_character(id)<br>查看在朝人物的官职、忠诚、能力。</p></div>
+<div class="card"><h3>查事项</h3><p style="font-size:13px">list_issues<br>查看在办事项的紧张度、进度、承办人。</p></div>
+<div class="card"><h3>查局势</h3><p style="font-size:13px">list_situations<br>查看潼关军令、关中粮储等局势进度。</p></div>
+</div>
+</div></section>
+
+<!-- 事件效果 -->
+<section><div class="wrap">
+<div class="section-title">
+<span class="eyebrow">事件效果</span>
+<h2>不是关键词匹配，是AI理解</h2>
+<p>玩家对事件做出选择后，AI会根据当前盘面生成具体效果，而不是硬编码的数值变化。</p>
+</div>
+<div class="grid-2">
+<div>
+<h3>之前（关键词匹配）</h3>
+<div class="card" style="margin-bottom:12px">
+<p style="font-size:13px"><b>玩家选：</b>全力救援睢阳</p>
+<p style="font-size:13px"><b>程序做：</b>检测到"救援"和"全力"关键词</p>
+<p style="font-size:13px"><b>结果：</b>固定扣120金、100粮</p>
+<p style="font-size:13px;color:#888">问题：不管睢阳实际情况如何，效果都一样。</p>
+</div>
+</div>
+<div>
+<h3>现在（AI驱动）</h3>
+<div class="card" style="margin-bottom:12px">
+<p style="font-size:13px"><b>玩家选：</b>全力救援睢阳</p>
+<p style="font-size:13px"><b>AI做：</b>先查睢阳（守军2000，民心35）、查附近军队（朔方军在河东）、查国库（金280）</p>
+<p style="font-size:13px"><b>结果：</b>拨粮30给睢阳 + 调朔方军驰援</p>
+<p style="font-size:13px;color:#477766">好处：效果贴合实际盘面，每次可能不同。</p>
+</div>
+</div>
+</div>
+</div></section>
+
+<!-- 月末奏章 -->
+<section class="dark"><div class="wrap">
+<div class="section-title">
+<span class="eyebrow">月末奏章</span>
+<h2>白话史书风格的回合结算</h2>
+<p>每回合结算后，史官会把本月发生的事写成一篇奏章，按五个章节组织，流式逐字显示给玩家。</p>
+</div>
+<div class="grid-2">
+<div>
+<h3 style="color:#f0e6d4">五章结构</h3>
+<div class="card-dark" style="margin-bottom:8px"><b style="color:#efcb85">一、军务</b><p style="font-size:13px">军事动向、战况、调防、补给</p></div>
+<div class="card-dark" style="margin-bottom:8px"><b style="color:#efcb85">二、财政</b><p style="font-size:13px">钱粮收支、国库变化</p></div>
+<div class="card-dark" style="margin-bottom:8px"><b style="color:#efcb85">三、地方</b><p style="font-size:13px">各地民心、动乱、灾异</p></div>
+<div class="card-dark" style="margin-bottom:8px"><b style="color:#efcb85">四、人事</b><p style="font-size:13px">任免、去职、人物动向</p></div>
+<div class="card-dark"><b style="color:#efcb85">五、待决</b><p style="font-size:13px">未完成的事项、悬而未决的危机</p></div>
+</div>
+<div>
+<h3 style="color:#f0e6d4">风格要求</h3>
+<p>写"潼关守军粮尽，士卒日食一餐"，不写"补给降至35"。</p>
+<p>写"朝廷拨粮三十石驰援睢阳，朔方军即日东进"，不写"朝廷采取了积极措施"。</p>
+<p>每个段落以一个具体的场景或人物动作开篇，结尾留一句余韵暗示天下走向。</p>
+</div>
+</div>
+</div></section>
+
 <section class="dark"><div class="wrap">
 <div class="section-title">
 <span class="eyebrow">技术栈</span>
@@ -335,7 +444,7 @@ footer p{color:#aab5ac;font-size:12px;margin-top:8px}
 <div class="grid-4">
 <div class="card-dark"><b style="color:#efcb85">前端</b><p style="font-size:13px">React 19 + TypeScript + Vite<br>单文件SPA，流式渲染</p></div>
 <div class="card-dark"><b style="color:#efcb85">后端</b><p style="font-size:13px">Python 3.13 + FastAPI<br>路由模块化，SSE流式输出</p></div>
-<div class="card-dark"><b style="color:#efcb85">AI层</b><p style="font-size:13px">Agent工厂模式<br>供应商自动适配<br>流式 + JSON修复</p></div>
+<div class="card-dark"><b style="color:#efcb85">AI层</b><p style="font-size:13px">Agent工厂 + Tool-Use<br>供应商自动适配<br>流式 + JSON修复</p></div>
 <div class="card-dark"><b style="color:#efcb85">存储</b><p style="font-size:13px">SQLite WAL<br>自动存档 + 手动存读档</p></div>
 </div>
 </div></section>

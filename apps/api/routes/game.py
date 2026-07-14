@@ -10,7 +10,7 @@ from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from anshi.ai import generate_turn_narration, generate_world_proposal, load_config
+from anshi.ai import generate_event_effects, generate_turn_narration, generate_world_proposal, load_config
 from anshi.tools import build_game_tools
 from anshi.campaign import ACT_NAMES, advance as advance_campaign, CampaignEvent, CampaignProgress
 from anshi.conversation import ConversationState, promulgate_decrees
@@ -41,7 +41,80 @@ class PolicySelectRequest(BaseModel):
     policy_id: str
 
 
-def _apply_event_choice(management, resolved: dict | None) -> list[str]:
+def _decree_targets(management) -> dict[str, dict[str, str]]:
+    return {
+        domain: {key: getattr(value, "name", getattr(value, "title", key)) for key, value in getattr(management, domain).items()}
+        for domain in ("regions", "armies", "issues", "characters")
+    }
+
+
+def _apply_agent_event_effects(management, resolved: dict | None, sim_tools, sim_executors) -> list[str]:
+    """Agent 驱动的事件效果生成。失败时回退到硬匹配。"""
+    if not resolved:
+        return []
+    event_id, choice = resolved["event_id"], resolved["choice"]
+
+    # 找到事件数据
+    event_data = None
+    for act in CAMPAIGN.get("acts", []):
+        for ev in act.get("event_candidates", []):
+            if ev.get("id") == event_id:
+                event_data = ev
+                break
+        if event_data:
+            break
+
+    if not event_data:
+        return _apply_event_choice_fallback(management, resolved)
+
+    # Agent 生成效果
+    targets = _decree_targets(management)
+    context = {
+        "date": f"{getattr(management, 'turn', '?')}回合",
+        "regions": {k: {"name": v.name, "support": v.support, "unrest": v.unrest} for k, v in management.regions.items()},
+        "armies": {k: {"name": v.name, "region": v.region, "strength": v.strength} for k, v in management.armies.items()},
+        "finance": {"cash": management.finance.cash, "grain": management.finance.grain},
+    }
+    effects_json, narrative, model_used = generate_event_effects(
+        event_data.get("title", event_id),
+        event_data.get("summary", ""),
+        choice,
+        targets,
+        context,
+        tools=sim_tools,
+        tool_executors=sim_executors,
+    )
+
+    if not effects_json:
+        # Agent 失败，回退到硬匹配
+        return _apply_event_choice_fallback(management, resolved)
+
+    # 执行 agent 生成的效果（复用 draft_directive 逻辑）
+    from anshi.management import draft as draft_directive
+    result_effects = []
+    for eff in effects_json[:4]:
+        kind = eff.get("kind", "")
+        target = eff.get("target", "")
+        amount = max(1, min(100, int(eff.get("amount", 10))))
+        subject = eff.get("subject", f"事件：{choice}")
+        reason = eff.get("reason", "")
+        if kind in _DIRECTIVE_DOMAINS and target in getattr(management, _DIRECTIVE_DOMAINS[kind], {}):
+            draft_directive(management, kind, target, amount, subject)
+            result_effects.append(f"{reason}" if reason else f"{kind} → {target}")
+    if narrative:
+        result_effects.insert(0, narrative)
+    return result_effects
+
+
+_DIRECTIVE_DOMAINS = {
+    "relief": "regions", "tax": "regions", "fortify": "regions",
+    "supply": "armies", "mobilize": "armies",
+    "investigate": "issues", "mediate": "issues", "appoint": "characters",
+}
+
+
+def _apply_event_choice_fallback(management, resolved: dict | None) -> list[str]:
+    """硬匹配回退（保留作为兜底）。"""
     if not resolved:
         return []
     event_id, choice = resolved["event_id"], resolved["choice"]
@@ -194,7 +267,7 @@ def register(router_: APIRouter, game) -> None:
             result["world_events"].extend(resolve_policy(game.progress, game.campaign["state"], game.management))
             result["world_events"].extend(resolve_movements(game.strategy))
             result["world_events"].extend(simulate_month(game.strategy, game.progress.act, game.progress.total_turn))
-            event_effects = _apply_event_choice(game.management, campaign_result.get("resolved"))
+            event_effects = _apply_agent_event_effects(game.management, campaign_result.get("resolved"), sim_tool_defs, sim_tool_executors)
             result["world_events"].extend(event_effects)
             result["world_events"].extend(campaign_result.get("secret_updates", []))
             issued = promulgate_decrees(game.conversation, game.progress.total_turn)
@@ -264,7 +337,7 @@ def register(router_: APIRouter, game) -> None:
             result["world_events"].extend(resolve_policy(game.progress, game.campaign["state"], game.management))
             result["world_events"].extend(resolve_movements(game.strategy))
             result["world_events"].extend(simulate_month(game.strategy, game.progress.act, game.progress.total_turn))
-            event_effects = _apply_event_choice(game.management, campaign_result.get("resolved"))
+            event_effects = _apply_agent_event_effects(game.management, campaign_result.get("resolved"), sim_tool_defs, sim_tool_executors)
             result["world_events"].extend(event_effects)
             result["world_events"].extend(campaign_result.get("secret_updates", []))
             issued = promulgate_decrees(game.conversation, game.progress.total_turn)

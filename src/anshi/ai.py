@@ -335,6 +335,83 @@ def polish_document(text: str, config: LLMConfig | None = None) -> tuple[str, bo
         return source, False
 
 
+def generate_event_effects(
+    event_title: str,
+    event_summary: str,
+    choice: str,
+    targets: Mapping[str, object],
+    context: Mapping[str, object],
+    *,
+    tools: list[dict] | None = None,
+    tool_executors: dict | None = None,
+    config: LLMConfig | None = None,
+) -> tuple[list[dict[str, object]], str, bool]:
+    """Agent 驱动的事件效果生成。
+
+    把事件选项当作"诏意"传给 agent，agent 先用工具查盘面，再生成结构化效果。
+    返回 (effects, narrative, model_used)。
+    effects 格式同 decree candidates: [{kind, target, amount, subject, reason}]
+    narrative: 一段叙述文本，描述事件效果的因果逻辑
+    """
+    cfg = config or load_config(role="simulation")
+    empty: list[dict[str, object]] = []
+    if cfg is None:
+        return empty, "", False
+
+    tool_instruction = ""
+    if tools and tool_executors:
+        tool_instruction = "\n\nYou have query tools available. Before generating effects, use tools to check the current state of relevant regions, armies, and characters. Make effects match the actual game state."
+
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "你是历史策略游戏的事件效果生成器。玩家对一个军国大事做出了选择，你需要根据当前盘面生成合理的效果。\n\n"
+                "输出两段，用换行分隔：\n"
+                "第一段：一个JSON对象 {effects:[{kind,target,amount,subject,reason}]}。\n"
+                "  kind 只能是 relief/tax/supply/mobilize/fortify/investigate/appoint/mediate。\n"
+                "  target 必须从可用目标ID中选择。amount 为 1-100。\n"
+                "  每个 effect 代表一个具体的朝堂行动，要贴合事件选择的语义。\n"
+                "  比如【全力救援睢阳】-> 可能生成 supply(拨粮给睢阳) + mobilize(调附近军队驰援)。\n"
+                "  比如【固守潼关】-> 可能生成 fortify(加固城防) + supply(补给潼关守军)。\n\n"
+                "第二段：以 <<<叙述>>> 开头，写一段 50-100 字的叙述，描述这个选择的因果逻辑和后果。\n"
+                "  要具体，不要抽象。写【朝廷拨粮三十石驰援睢阳，朔方军即日东进】，不要写【朝廷采取了积极措施】。\n\n"
+                "效果数量控制在 1-4 个，不要太多。每个效果要有明确的 reason。"
+                + tool_instruction
+            ),
+        },
+        {
+            "role": "user",
+            "content": (
+                f"事件：{event_title}\n"
+                f"事件描述：{event_summary}\n"
+                f"玩家选择：{choice}\n\n"
+                f"可用目标：{_json_text(targets)}\n\n"
+                f"当前盘面：{_json_text(context)}"
+            ),
+        },
+    ]
+    try:
+        text = chat_completion(
+            messages, cfg, temperature=0.4,
+            tools=tools, tool_executors=tool_executors,
+        )
+        # 解析 effects JSON
+        start, end = text.find("{"), text.rfind("}")
+        if start < 0 or end <= start:
+            return empty, "", False
+        payload = json.loads(text[start : end + 1])
+        effects = payload.get("effects", []) if isinstance(payload, dict) else []
+        # 解析叙述
+        narrative = ""
+        marker = text.find("<<<叙述>>>")
+        if marker >= 0:
+            narrative = text[marker + len("<<<叙述>>>"):].strip()
+        return (effects, narrative, True) if isinstance(effects, list) else (empty, narrative, True)
+    except (OSError, TimeoutError, KeyError, IndexError, TypeError, ValueError, RuntimeError, json.JSONDecodeError):
+        return empty, "", False
+
+
 def generate_decree_candidates(text: str, targets: Mapping[str, object], config: LLMConfig | None = None) -> tuple[list[dict[str, object]], bool]:
     cfg = config or load_config(role="utility")
     if cfg is None:

@@ -133,32 +133,78 @@ def chat_completion(
     *,
     temperature: float = 0.7,
     tag: str = "",
-) -> str:
+    tools: list[dict] | None = None,
+    tool_executors: dict | None = None,
+    max_tool_rounds: int = 5,
+) -> str | dict:
+    """非流式 chat completion。支持 tool-use 循环。
+
+    当 tools 和 tool_executors 都提供时，启用 function calling 循环：
+    模型请求 tool → 执行 → 结果回传 → 模型继续，直到模型不再请求 tool 或达到 max_tool_rounds。
+    返回最终的 content 字符串。
+    """
     cfg = config or load_config()
     if cfg is None:
         raise RuntimeError("未配置联网模型")
-    payload: dict = {"model": cfg.model, "messages": messages, "temperature": temperature}
-    extra = provider_extra_body(cfg.base_url)
-    if extra:
-        payload["extra_body"] = extra
-    body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-    request = Request(
-        _endpoint(cfg),
-        data=body,
-        headers={"Authorization": f"Bearer {cfg.api_key}", "Content-Type": "application/json"},
-        method="POST",
-    )
-    with urlopen(request, timeout=cfg.timeout) as response:
-        payload = json.loads(response.read().decode("utf-8"))
-    content = payload["choices"][0]["message"]["content"]
-    if not isinstance(content, str) or not content.strip():
-        raise ValueError("模型返回了空内容")
-    # token 记账
-    usage = payload.get("usage")
-    if isinstance(usage, dict):
-        from anshi.token_stats import record as record_token
-        record_token(cfg.model, usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0), tag=tag)
-    return content.strip()
+
+    for round_idx in range(max_tool_rounds):
+        payload: dict = {"model": cfg.model, "messages": messages, "temperature": temperature}
+        extra = provider_extra_body(cfg.base_url)
+        if extra:
+            payload["extra_body"] = extra
+        if tools and tool_executors:
+            payload["tools"] = tools
+        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        request = Request(
+            _endpoint(cfg),
+            data=body,
+            headers={"Authorization": f"Bearer {cfg.api_key}", "Content-Type": "application/json"},
+            method="POST",
+        )
+        with urlopen(request, timeout=cfg.timeout) as response:
+            resp = json.loads(response.read().decode("utf-8"))
+
+        # token 记账
+        usage = resp.get("usage")
+        if isinstance(usage, dict):
+            from anshi.token_stats import record as record_token
+            record_token(cfg.model, usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0), tag=tag)
+
+        choice = resp["choices"][0]
+        message = choice["message"]
+        finish = choice.get("finish_reason", "")
+
+        # 没有 tool 调用 → 返回 content
+        if finish != "tool_calls" or not message.get("tool_calls"):
+            content = message.get("content", "")
+            if not isinstance(content, str) or not content.strip():
+                raise ValueError("模型返回了空内容")
+            return content.strip()
+
+        # 执行 tool 调用
+        messages.append(message)  # 把 assistant 的 tool_calls 消息加入
+        for tc in message["tool_calls"]:
+            fn_name = tc["function"]["name"]
+            try:
+                fn_args = json.loads(tc["function"].get("arguments", "{}"))
+            except json.JSONDecodeError:
+                fn_args = {}
+            executor = tool_executors.get(fn_name)
+            if executor:
+                try:
+                    result = executor(**fn_args)
+                except Exception as e:
+                    result = f"工具执行出错：{e}"
+            else:
+                result = f"未知工具：{fn_name}"
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tc["id"],
+                "content": result,
+            })
+
+    # 超过最大轮次
+    raise RuntimeError(f"tool-use 超过最大轮次 {max_tool_rounds}")
 
 
 def stream_chat_completion(
@@ -313,11 +359,28 @@ def generate_decree_candidates(text: str, targets: Mapping[str, object], config:
         return (candidates, True) if isinstance(candidates, list) else ([], False)
     except (OSError, TimeoutError, KeyError, IndexError, TypeError, ValueError, RuntimeError, json.JSONDecodeError):
         return [], False
-def generate_world_proposal(context: Mapping[str, object], config: LLMConfig | None = None) -> tuple[dict[str, object], bool]:
+def generate_world_proposal(
+    context: Mapping[str, object],
+    config: LLMConfig | None = None,
+    *,
+    tools: list[dict] | None = None,
+    tool_executors: dict | None = None,
+) -> tuple[dict[str, object], bool]:
     cfg = config or load_config(role="simulation")
     empty = {"assessment": "", "proposals": [], "situations": [], "npc_actions": [], "event_seeds": []}
     if cfg is None:
         return empty, False
+
+    tool_instruction = ""
+    if tools and tool_executors:
+        tool_instruction = (
+            "\n\n你有查询工具可用：可以查看地区详情（list_regions/inspect_region）、"
+            "军队详情（list_armies/inspect_army）、国库（check_treasury）、"
+            "人物名册（list_characters/inspect_character）、在办事项（list_issues）、"
+            "局势进度（list_situations）。"
+            "在生成提案之前，先用工具查清你不确定的盘面数据，不要凭印象猜测。"
+        )
+
     messages = [
         {
             "role": "system",
@@ -336,12 +399,16 @@ def generate_world_proposal(context: Mapping[str, object], config: LLMConfig | N
                 "以小说般的叙事开篇（场景、气氛、人物动作），用文言与白话相间的笔法，"
                 "涵盖诏令施行、军事动向、财政变化、民心态势，以因果叙事串联，结尾留一句余韵暗示天下走向。"
                 "不要修改任何数值，不要出现英文。"
+                + tool_instruction
             ),
         },
         {"role": "user", "content": "当前回合权威上下文：\n" + _json_text(context)},
     ]
     try:
-        text = chat_completion(messages, cfg, temperature=0.45)
+        text = chat_completion(
+            messages, cfg, temperature=0.45,
+            tools=tools, tool_executors=tool_executors,
+        )
         # 解析 JSON 部分
         start, end = text.find("{"), text.rfind("}")
         if start < 0 or end <= start:

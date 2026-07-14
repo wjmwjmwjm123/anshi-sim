@@ -265,3 +265,43 @@ def run_agent_json(
     if parsed is not None:
         return parsed, True
     return fallback, False
+
+
+def run_agent_with_tools(
+    agent: CouncilAgent,
+    user_prompt: str,
+    tools: list[dict],
+    tool_executors: dict,
+    *,
+    fallback: str = "",
+    with_status: bool = False,
+    tag: str = "",
+    max_tool_rounds: int = 5,
+) -> str | tuple[str, bool]:
+    """执行 agent 并支持 tool-use 循环。
+
+    模型可以请求查询工具（查地区、军队、国库等），工具结果回传后模型继续生成。
+    直到模型不再请求工具，返回最终文本。
+
+    Args:
+        agent: Agent 配置
+        user_prompt: 用户提示
+        tools: OpenAI function calling 格式的工具定义
+        tool_executors: {工具名: 执行函数} 映射
+        fallback: 无 API key 时的回退文本
+        with_status: 是否返回 (text, model_used) 元组
+        tag: 日志标签
+        max_tool_rounds: 最大工具调用轮次
+    """
+    if not agent.config.api_key:
+        return (fallback, False) if with_status else fallback
+    try:
+        text = chat_completion(
+            _messages(agent, user_prompt), agent.config,
+            temperature=agent.temperature, tag=tag or agent.name,
+            tools=tools, tool_executors=tool_executors,
+            max_tool_rounds=max_tool_rounds,
+        )
+        return (text, True) if with_status else text
+    except (OSError, TimeoutError, KeyError, IndexError, TypeError, ValueError, RuntimeError, json.JSONDecodeError):
+        return (fallback, False) if with_status else fallback

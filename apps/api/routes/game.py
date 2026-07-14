@@ -11,6 +11,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from anshi.ai import generate_turn_narration, generate_world_proposal, load_config
+from anshi.tools import build_game_tools
 from anshi.campaign import ACT_NAMES, advance as advance_campaign, CampaignEvent, CampaignProgress
 from anshi.conversation import ConversationState, promulgate_decrees
 from anshi.core import Order, apply_order
@@ -106,6 +107,11 @@ def register(router_: APIRouter, game) -> None:
     CAMPAIGN = game.campaign_data
     SCENARIO = game.scenario
 
+    # 构建推演 tool-use 工具集（只读查询盘面）
+    sim_tool_defs, sim_tool_executors = build_game_tools(
+        game.management, game.strategy, game.progress, CAMPAIGN,
+    )
+
     def activate_strategy() -> None:
         for item in CAMPAIGN["armies"]:
             if item["act_from"] <= game.progress.act and item["id"] not in game.strategy.armies:
@@ -199,7 +205,7 @@ def register(router_: APIRouter, game) -> None:
                 "management": asdict(game.management), "strategy": asdict(game.strategy),
                 "situations": game.progress.situations, "modifiers": game.progress.modifiers,
                 "date": f"{game.progress.year}年{game.progress.month}月", "act": ACT_NAMES[game.progress.act],
-            })
+            }, tools=sim_tool_defs, tool_executors=sim_tool_executors)
             simulation = apply_world_proposal(proposal, game.management)
             result["llm_simulation"] = simulation
             if simulation["assessment"]:
@@ -269,7 +275,7 @@ def register(router_: APIRouter, game) -> None:
                 "management": asdict(game.management), "strategy": asdict(game.strategy),
                 "situations": game.progress.situations, "modifiers": game.progress.modifiers,
                 "date": f"{game.progress.year}年{game.progress.month}月", "act": ACT_NAMES[game.progress.act],
-            })
+            }, tools=sim_tool_defs, tool_executors=sim_tool_executors)
             simulation = apply_world_proposal(proposal, game.management)
             result["llm_simulation"] = simulation
             if simulation["assessment"]:

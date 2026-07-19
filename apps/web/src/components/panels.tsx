@@ -432,7 +432,7 @@ export function DecreeReview({
         {decree.candidates.length ? (
           <button className="ask-btn" onClick={() => onConfirm(decree.id)}>列入本回合行动</button>
         ) : (
-          <p className="decree-empty">文书模型未返回可执行行动；可直接颁行圣旨与已暂存裁决，或修改诏意后重拟。</p>
+          <p className="decree-empty">中书省未能拆出具体指令——可在诏书中明确写明目标（哪个军队/地区/人物）与动作（调拨/征兵/查办/任命），或直接颁行让推演模型自行判断。</p>
         )}
         <p className="compact-note">行动、御前裁决与诏书将在“颁诏”时统一结算。</p>
       </aside>

@@ -420,10 +420,14 @@ def generate_decree_candidates(text: str, targets: Mapping[str, object], config:
         {
             "role": "system",
             "content": (
-                "你是唐廷中书省的诏令结构化助手。把皇帝自由诏书拆成可执行事项，只输出JSON对象："
-                "{candidates:[{kind,target,amount,subject,reason}]}。kind只能是 relief、tax、supply、mobilize、"
-                "fortify、investigate、appoint、mediate；target必须从用户提供的对应目标ID中选择；amount为1到100。"
-                "不得发明目标，不得添加诏书中没有的命令。无法执行的句子不要强行映射。"
+                "你是唐廷中书省的诏令结构化助手。把皇帝诏书拆成可执行朝堂事项，输出JSON对象："
+                "{candidates:[{kind,target,amount,subject,reason}]}。\n"
+                "kind 可选：relief（赈济）、tax（加税）、supply（拨粮补给）、mobilize（征兵动员）、"
+                "fortify（筑城）、investigate（调查）、appoint（任命）、mediate（调停）。\n"
+                "target 从可用目标中选择最接近的ID；amount 为 1-100 表投入规模。\n"
+                "重要：遇到'勤王''驰援''调兵''决战''出击'等军事命令→用 mobilize（指定目标军队或附近地区）或 supply（拨粮给目标军队）。\n"
+                "遇到'查办''追责''核实'→用 investigate。遇到'任命''授官''封赏'→用 appoint。\n"
+                "即使原文用词不精确，也要找到最接近的 kind 和 target 映射。不要因为措辞不匹配就返回空列表。"
             ),
         },
         {"role": "user", "content": "可用目标：" + _json_text(targets) + "\n诏书：" + text.strip()},

@@ -2,12 +2,12 @@ import React from "react";
 import type { Catalog, Management } from "../types";
 import { cn, evidenceLabel } from "../constants";
 
-export function Metric({ label, value, unit = "" }: { label: string; value: number | string; unit?: string }) {
+export function Metric({ label, value, unit = "", hint = "" }: { label: string; value: number | string; unit?: string; hint?: string }) {
   return (
-    <div className="metric">
+    <div className="metric" data-hint={hint || undefined}>
       <span>{label}</span>
       <strong>{typeof value === "number" ? value.toLocaleString() : value}</strong>
-      <small>{unit}</small>
+      {hint && <small>{hint}</small>}
     </div>
   );
 }

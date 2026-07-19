@@ -36,11 +36,11 @@ export function TopBar({
         </div>
       </div>
       <div className="top-metrics">
-        <Metric label="皇威" value={state.central_prestige} />
-        <Metric label="军势" value={state.military_power} />
-        <Metric label="民心" value={state.popular_support} />
-        <Metric label="现银" value={management.finance.cash} />
-        <Metric label="粮储" value={management.finance.grain} />
+        <Metric label="皇威" value={state.central_prestige} hint="诏令执行力·受朝堂派系与军事成败影响" />
+        <Metric label="军势" value={state.military_power} hint="唐军总战力·受潼关战局与节度使调度影响" />
+        <Metric label="民心" value={state.popular_support} hint="百姓安定度·受赋税赈济与战乱波及影响" />
+        <Metric label="现银" value={management.finance.cash} hint={`月入${management.finance.monthly_income}·月支${management.finance.monthly_expenses}·天宝岁入约5700万贯`} />
+        <Metric label="粮储" value={management.finance.grain} hint={`月粮${management.finance.monthly_grain}·天宝仓储约一万万石`} />
       </div>
       <div className="date-block">
         <span>{state.phase} · 第 {progress.total_turn} 回合 · {progress.year}年{progress.month}月</span>

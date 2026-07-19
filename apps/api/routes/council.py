@@ -150,6 +150,12 @@ def register(router_: APIRouter, game) -> None:
                         if before and current_speaker:
                             current_content.append(before)
                             yield f"data: {json.dumps({'type': 'speech_delta', 'name': current_speaker, 'delta': before}, ensure_ascii=False)}\n\n"
+                        # If text before first delimiter and no speaker yet, assign to first selected
+                        if before and not current_speaker:
+                            current_speaker = fallback_speaker
+                            current_content.append(before)
+                            yield f"data: {json.dumps({'type': 'speech_start', 'name': current_speaker, 'round': round_no}, ensure_ascii=False)}\n\n"
+                            yield f"data: {json.dumps({'type': 'speech_delta', 'name': current_speaker, 'delta': before}, ensure_ascii=False)}\n\n"
                         for item in flush_speech():
                             yield item
                         new_speaker = match.group(1).strip()
@@ -165,11 +171,23 @@ def register(router_: APIRouter, game) -> None:
                             if current_speaker:
                                 current_content.append(before)
                                 yield f"data: {json.dumps({'type': 'speech_delta', 'name': current_speaker, 'delta': before}, ensure_ascii=False)}\n\n"
+                            elif before.strip():
+                                # Text before first partial delimiter — assign to first speaker
+                                current_speaker = fallback_speaker
+                                current_content.append(before)
+                                yield f"data: {json.dumps({'type': 'speech_start', 'name': current_speaker, 'round': round_no}, ensure_ascii=False)}\n\n"
+                                yield f"data: {json.dumps({'type': 'speech_delta', 'name': current_speaker, 'delta': before}, ensure_ascii=False)}\n\n"
                             pending_text = pending_text[marker_start:]
                             continue
                         break
                     if current_speaker:
                         current_content.append(pending_text)
+                        yield f"data: {json.dumps({'type': 'speech_delta', 'name': current_speaker, 'delta': pending_text}, ensure_ascii=False)}\n\n"
+                    elif pending_text.strip():
+                        # No speaker yet — assign to first selected
+                        current_speaker = fallback_speaker
+                        current_content.append(pending_text)
+                        yield f"data: {json.dumps({'type': 'speech_start', 'name': current_speaker, 'round': round_no}, ensure_ascii=False)}\n\n"
                         yield f"data: {json.dumps({'type': 'speech_delta', 'name': current_speaker, 'delta': pending_text}, ensure_ascii=False)}\n\n"
                     pending_text = ""
 

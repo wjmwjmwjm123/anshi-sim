@@ -67,25 +67,27 @@ export function DirectiveDock({
         ) : null}
         <button onClick={() => onAdd({ kind, target: actualTarget, amount, subject })} disabled={!actualTarget || busy}>加入诏令</button>
       </div>
-      <div className="directive-queue">
-        <span>待颁 {snap.management.directives.length}</span>
-        {snap.management.directives.map((item) => (
-          <div key={item.id}>
-            <b>{directiveMeta[item.kind].label}</b>
-            <small>
-              {((snap.management as any)[directiveMeta[item.kind].domain]?.[item.target]?.name ||
-                (snap.management as any)[directiveMeta[item.kind].domain]?.[item.target]?.title ||
-                item.target)}{" "}
-              · {item.amount}
-            </small>
-            <button onClick={() => onRemove(item.id)} title="删除诏令" aria-label="删除诏令">
-              <Trash2 size={14} />
-            </button>
-          </div>
-        ))}
-      </div>
+      {snap.management.directives.length > 0 && (
+        <div className="directive-queue">
+          <span>待颁 {snap.management.directives.length} 道</span>
+          {snap.management.directives.map((item) => (
+            <div key={item.id}>
+              <b>{directiveMeta[item.kind].label}</b>
+              <small>
+                {((snap.management as any)[directiveMeta[item.kind].domain]?.[item.target]?.name ||
+                  (snap.management as any)[directiveMeta[item.kind].domain]?.[item.target]?.title ||
+                  item.target)}{" "}
+                · {item.amount}
+              </small>
+              <button onClick={() => onRemove(item.id)} title="删除诏令" aria-label="删除诏令">
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
       <button className="resolve-btn" onClick={onResolve} disabled={busy}>
-        {busy ? "正在结算" : snap.management.directives.length ? "颁诏并推进" : "无诏推进一回合"}
+        {busy ? "正在结算…" : snap.management.directives.length > 0 ? `颁诏并推进 · ${snap.management.directives.length} 道` : "推进一回合"}
       </button>
     </section>
   );

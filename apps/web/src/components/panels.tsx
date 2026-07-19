@@ -421,20 +421,8 @@ export function DecreeReview({
             <span>《{decree.decision.title}》：{decree.decision.choice}</span>
           </div>
         )}
-        <h3>模型拆出的朝堂行动</h3>
-        {decree.candidates.map((item: any, index: number) => (
-          <div className="candidate-command" key={index}>
-            <b>{directiveMeta[item.kind as DirectiveKind]?.label || "立项核议"}</b>
-            <span>投入 {item.amount}</span>
-            <small>{item.reason}</small>
-          </div>
-        ))}
-        {decree.candidates.length ? (
-          <button className="ask-btn" onClick={() => onConfirm(decree.id)}>列入本回合行动</button>
-        ) : (
-          <p className="decree-empty">中书省未能拆出具体指令——可在诏书中明确写明目标（哪个军队/地区/人物）与动作（调拨/征兵/查办/任命），或直接颁行让推演模型自行判断。</p>
-        )}
-        <p className="compact-note">行动、御前裁决与诏书将在“颁诏”时统一结算。</p>
+        <p className=”compact-note”>圣旨已润色为唐廷格式。颁诏后，推演模型将根据诏书内容自行判断天下反应，无需逐条拆解指令。</p>
+        <button className=”ask-btn” onClick={() => onConfirm(decree.id)}>颁行圣旨</button>
       </aside>
     </div>
   );

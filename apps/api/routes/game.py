@@ -343,6 +343,7 @@ def register(router_: APIRouter, game) -> None:
                 "turn": result, "campaign": campaign_result, "state": game.campaign["state"].payload(),
                 "management": asdict(game.management), "strategy": asdict(game.strategy),
                 "situations": game.progress.situations, "modifiers": game.progress.modifiers,
+                "decrees": [{"text": d.get("rendered_text") or d.get("text", ""), "id": d.get("id")} for d in issued],
                 "date": f"{game.progress.year}年{game.progress.month}月", "act": ACT_NAMES[game.progress.act],
             }, tools=sim_tool_defs, tool_executors=sim_tool_executors)
             simulation = apply_world_proposal(proposal, game.management)
@@ -416,6 +417,7 @@ def register(router_: APIRouter, game) -> None:
                 "turn": result, "campaign": campaign_result, "state": game.campaign["state"].payload(),
                 "management": asdict(game.management), "strategy": asdict(game.strategy),
                 "situations": game.progress.situations, "modifiers": game.progress.modifiers,
+                "decrees": [{"text": d.get("rendered_text") or d.get("text", ""), "id": d.get("id")} for d in issued],
                 "date": f"{game.progress.year}年{game.progress.month}月", "act": ACT_NAMES[game.progress.act],
             }, tools=sim_tool_defs, tool_executors=sim_tool_executors)
             simulation = apply_world_proposal(proposal, game.management)

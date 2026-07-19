@@ -1,1 +1,1 @@
-{"root":["./src/app.tsx","./src/worldmap.tsx","./src/api.ts","./src/constants.ts","./src/main.tsx","./src/types.ts","./src/components/layout.tsx","./src/components/panels.tsx","./src/components/screens.tsx","./src/components/shared.tsx"],"version":"5.9.3"}
+{"root":["./src/app.tsx","./src/worldmap.tsx","./src/api.ts","./src/constants.ts","./src/main.tsx","./src/types.ts","./src/components/layout.tsx","./src/components/panels.tsx","./src/components/screens.tsx","./src/components/shared.tsx"],"errors":true,"version":"5.9.3"}

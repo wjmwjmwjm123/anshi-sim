@@ -110,9 +110,8 @@ def register(router_: APIRouter, game) -> None:
     def approve_freeform_decree(decree_id: int) -> dict:
         with game.lock:
             decree = confirm_decree(game.conversation, decree_id)
-            if not decree["candidates"]:
-                return {"decree": decree, "directives": [asdict(item) for item in game.management.directives], "accepted": False, "detail": "诏书尚未形成可执行事项，请修改后重拟。"}
-            for candidate in decree["candidates"]:
+            # 结构化指令有则加入队列，没有也不拦——推演模型结算时自行解读诏书全文
+            for candidate in decree.get("candidates", []) or []:
                 draft_directive(game.management, candidate["kind"], candidate["target"], candidate["amount"], candidate.get("subject", ""))
             game.store.save_conversation(game.conversation)
             game.store.save_management(game.management)

@@ -101,6 +101,12 @@ function fmt(n: number): string {
 export default function WorldMap({ data, management, strategy, selected, onSelect }: WorldMapProps) {
   const [detailRegion, setDetailRegion] = React.useState<string | null>(null);
   const [selectedArmy, setSelectedArmy] = React.useState<string | null>(null);
+  const [zoom, setZoom] = React.useState(1);
+  const [pan, setPan] = React.useState({ x: 0, y: 0 });
+  const canvasRef = React.useRef<HTMLDivElement>(null);
+  const zoomIn = () => setZoom((z) => Math.min(2, z + 0.25));
+  const zoomOut = () => setZoom((z) => Math.max(0.5, z - 0.25));
+  const zoomReset = () => { setZoom(1); setPan({ x: 0, y: 0 }); };
 
   const counts = data.regions.reduce(
     (total, r) => ({ ...total, [allegiance(r.controller)]: total[allegiance(r.controller)] + 1 }),
@@ -140,12 +146,16 @@ export default function WorldMap({ data, management, strategy, selected, onSelec
         </dl>
       </header>
 
-      <div className="world-map-canvas" role="group" aria-label="安史之乱天下州镇控制图">
-        <img src="/assets/backgrounds/tang-terrain.webp" alt="唐代天下地形底图" />
-        <span className="world-map-shade" />
+      <div className="world-map-canvas" role="group" aria-label="安史之乱天下州镇控制图" ref={canvasRef}>
+        <div
+          className="world-map-layer"
+          style={{ transform: `scale(${zoom}) translate(${pan.x}px, ${pan.y}px)`, transformOrigin: "top left" }}
+        >
+          <img src="/assets/backgrounds/tang-terrain.webp" alt="唐代天下地形底图" />
+          <span className="world-map-shade" />
 
-        {/* Region markers */}
-        {data.regions.map((region) => {
+          {/* Region markers */}
+          {data.regions.map((region) => {
           const runtime = management.regions[region.id];
           const [dx, dy] = labelOffsets[region.id] || [0, 0];
           const side = allegiance(region.controller);
@@ -259,6 +269,7 @@ export default function WorldMap({ data, management, strategy, selected, onSelec
             )}
           </div>
         )}
+        </div>{/* end world-map-layer */}
 
         <footer className="world-map-legend">
           <span className="tang"><i />唐廷辖区</span>
@@ -267,6 +278,13 @@ export default function WorldMap({ data, management, strategy, selected, onSelec
           <span className="army-legend"><i className="icon-tang" /> 唐军</span>
           <span className="army-legend"><i className="icon-yan" /> 燕军</span>
         </footer>
+
+        {/* Zoom controls */}
+        <div className="map-zoom-controls">
+          <button onClick={zoomIn} title="放大" aria-label="放大">+</button>
+          <button onClick={zoomReset} title="还原" aria-label="还原">{Math.round(zoom * 100)}%</button>
+          <button onClick={zoomOut} title="缩小" aria-label="缩小">−</button>
+        </div>
       </div>
 
       {/* Region detail panel */}

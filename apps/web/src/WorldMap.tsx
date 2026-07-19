@@ -310,7 +310,7 @@ export default function WorldMap({ data, management, strategy, selected, onSelec
         {/* Zoom controls */}
         <div className="map-zoom-controls">
           <button onClick={zoomIn} title="放大" aria-label="放大">+</button>
-          <button onClick={zoomReset} title="还原" aria-label="还原">{Math.round(zoom * 100)}%</button>
+          <button onClick={zoomReset} title="还原" aria-label="还原">复原</button>
           <button onClick={zoomOut} title="缩小" aria-label="缩小">−</button>
         </div>
       </div>

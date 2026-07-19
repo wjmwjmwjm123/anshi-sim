@@ -114,7 +114,7 @@ export function CampaignMap({
       </div>
       <div className="map-zoom-controls">
         <button onClick={() => setZoom((z) => Math.min(2, +(z + 0.25).toFixed(2)))}>+</button>
-        <button onClick={() => { setZoom(1); }}>{Math.round(zoom * 100)}%</button>
+        <button onClick={() => { setZoom(1); }}>复原</button>
         <button onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.25).toFixed(2)))}>−</button>
       </div>
     </div>

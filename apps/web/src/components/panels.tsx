@@ -437,7 +437,6 @@ export function EventDecision({
         <span>第 {event.turn} 回合 · 军国奏牍</span>
         <h2>{event.title}</h2>
         <p>{event.summary}</p>
-        <blockquote>选择只会暂存为本回合裁决。你仍可召见人物、拟写圣旨；点击“颁诏并裁决”后才会统一结算。</blockquote>
         {busy && (
           <p className="decision-busy">
             <Clock3 aria-hidden="true" />正在暂存裁决，请稍候…

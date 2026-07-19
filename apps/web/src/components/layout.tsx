@@ -88,7 +88,7 @@ export function SideNav({
             src={`/assets/generated/nav/${id}.webp`}
             alt={label}
             loading="lazy"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target.nextElementSibling as HTMLElement).style.display = ""; }}
+            onError={(e) => { const t = e.target as HTMLImageElement; t.style.display = "none"; const sib = t.nextElementSibling as HTMLElement; if (sib) sib.style.display = ""; }}
           />
           <Icon size={18} className="nav-fallback-icon" style={{ display: "none" }} />
           <span>{label}</span>

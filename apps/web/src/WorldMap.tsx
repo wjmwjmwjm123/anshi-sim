@@ -103,10 +103,29 @@ export default function WorldMap({ data, management, strategy, selected, onSelec
   const [selectedArmy, setSelectedArmy] = React.useState<string | null>(null);
   const [zoom, setZoom] = React.useState(1);
   const [pan, setPan] = React.useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = React.useState(false);
+  const dragRef = React.useRef<{ sx: number; sy: number; px: number; py: number } | null>(null);
   const canvasRef = React.useRef<HTMLDivElement>(null);
-  const zoomIn = () => setZoom((z) => Math.min(2, z + 0.25));
-  const zoomOut = () => setZoom((z) => Math.max(0.5, z - 0.25));
+  const zoomIn = () => setZoom((z) => Math.min(2, +(z + 0.25).toFixed(2)));
+  const zoomOut = () => setZoom((z) => Math.max(0.5, +(z - 0.25).toFixed(2)));
   const zoomReset = () => { setZoom(1); setPan({ x: 0, y: 0 }); };
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (zoom <= 1) return;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    dragRef.current = { sx: e.clientX, sy: e.clientY, px: pan.x, py: pan.y };
+    setDragging(true);
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!dragRef.current) return;
+    const dx = e.clientX - dragRef.current.sx;
+    const dy = e.clientY - dragRef.current.sy;
+    setPan({ x: dragRef.current.px + dx / zoom, y: dragRef.current.py + dy / zoom });
+  };
+  const onPointerUp = () => {
+    dragRef.current = null;
+    setDragging(false);
+  };
 
   const counts = data.regions.reduce(
     (total, r) => ({ ...total, [allegiance(r.controller)]: total[allegiance(r.controller)] + 1 }),
@@ -146,10 +165,19 @@ export default function WorldMap({ data, management, strategy, selected, onSelec
         </dl>
       </header>
 
-      <div className="world-map-canvas" role="group" aria-label="安史之乱天下州镇控制图" ref={canvasRef}>
+      <div
+        className={`world-map-canvas ${dragging ? "dragging" : ""}`}
+        role="group"
+        aria-label="安史之乱天下州镇控制图"
+        ref={canvasRef}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+      >
         <div
           className="world-map-layer"
-          style={{ transform: `scale(${zoom}) translate(${pan.x}px, ${pan.y}px)`, transformOrigin: "top left" }}
+          style={{ transform: `scale(${zoom}) translate(${pan.x}px, ${pan.y}px)`, transformOrigin: "center center" }}
         >
           <img src="/assets/backgrounds/tang-terrain.webp" alt="唐代天下地形底图" />
           <span className="world-map-shade" />

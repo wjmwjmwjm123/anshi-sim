@@ -64,8 +64,13 @@ export function CampaignMap({
   onSelect?: (id: string) => void;
 }) {
   const armies = Object.values(strategy?.armies || {}) as any[];
+  const [zoom, setZoom] = React.useState(1);
   return (
     <div className="terrain-map" role="img" aria-label="安史之乱天下形势图">
+      <div
+        className="terrain-layer"
+        style={{ transform: `scale(${zoom})`, transformOrigin: "top left" }}
+      >
       <img src="/assets/backgrounds/tang-terrain.webp" alt="唐代天下地形底图" />
       <div className="map-wash tang" />
       <div className="map-wash yan" />
@@ -101,10 +106,16 @@ export function CampaignMap({
           </span>
         );
       })}
+      </div>{/* end terrain-layer */}
       <div className="terrain-legend">
         <span><i className="tang" />唐军控制</span>
         <span><i className="yan" />燕军控制</span>
         <span><i className="contested" />争夺地区</span>
+      </div>
+      <div className="map-zoom-controls">
+        <button onClick={() => setZoom((z) => Math.min(2, +(z + 0.25).toFixed(2)))}>+</button>
+        <button onClick={() => { setZoom(1); }}>{Math.round(zoom * 100)}%</button>
+        <button onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.25).toFixed(2)))}>−</button>
       </div>
     </div>
   );

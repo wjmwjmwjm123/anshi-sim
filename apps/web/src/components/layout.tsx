@@ -86,11 +86,11 @@ export function SideNav({
           <img
             className="nav-gen-icon"
             src={`/assets/generated/nav/${id}.webp`}
-            alt=""
+            alt={label}
             loading="lazy"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target.nextElementSibling as HTMLElement).style.display = ""; }}
           />
-          <Icon size={16} />
+          <Icon size={18} className="nav-fallback-icon" style={{ display: "none" }} />
           <span>{label}</span>
           {id === "memorials" && urgentIssueCount > 0 && <b>{urgentIssueCount}</b>}
         </button>

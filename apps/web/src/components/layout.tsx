@@ -83,7 +83,14 @@ export function SideNav({
     <nav className="side-nav">
       {nav.map(({ id, label, Icon }) => (
         <button key={id} className={tab === id ? "active" : ""} onClick={() => onTabChange(id)} title={label}>
-          <Icon size={18} />
+          <img
+            className="nav-gen-icon"
+            src={`/assets/generated/nav/${id}.webp`}
+            alt=""
+            loading="lazy"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
+          <Icon size={16} />
           <span>{label}</span>
           {id === "memorials" && urgentIssueCount > 0 && <b>{urgentIssueCount}</b>}
         </button>

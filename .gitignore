@@ -9,3 +9,4 @@ apps/web/.playwright-cli/
 data/*.db*
 output/
 .env
+apps/web/public/assets/generated/

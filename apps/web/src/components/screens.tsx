@@ -625,34 +625,43 @@ export function PolicyFocusViewRich({ snap, onSelect }: { snap: Snapshot; onSele
   const completed = new Set<string>(snap.progress.completed_policies || []);
   const active = snap.progress.active_policy;
   return (
-    <section className="policy-view">
-      <SectionHead eyebrow="经国远图" title="国策树" extra={<span>每回合至多推进一项</span>} />
-      <p className="policy-intro">选择一个可用节点。国策在本回合推进时完成，并写入帝国修正；前置节点和资源不足会阻止施行。</p>
-      <div className="policy-tree">
-        {focusBranches.map((branch) => (
-          <div className={"policy-branch " + branch.tone} key={branch.name}>
-            <h3>{branch.name}</h3>
-            <div>
-              {branch.nodes.map((node: any) => {
-                const done = completed.has(node.id);
-                const available = !done && !active && node.requires.every((req: string) => completed.has(req));
-                return (
-                  <button
-                    className={"policy-node " + (done ? "unlocked" : available ? "available" : "locked")}
-                    key={node.id}
-                    disabled={!available}
-                    title={policyEffects[node.id]}
-                    onClick={() => onSelect(node.id)}
-                  >
-                    <span>{done ? <CheckCircle2 /> : available ? <CirclePlay /> : <LockKeyhole />}</span>
-                    <b>{node.title}</b>
-                    <small>{done ? "帝国修正已生效" : policyEffects[node.id] || "需要前置国策"}</small>
-                  </button>
-                );
-              })}
+    <section className="policy-view-hoi">
+      <SectionHead eyebrow="经国远图" title="国策树" extra={<span>每回合至多推进一项 · 共{Object.values(focusBranches).flatMap(b => b.nodes).length}项</span>} />
+      <div className="focus-tree">
+        {focusBranches.map((branch) => {
+          const allDone = branch.nodes.every(n => completed.has(n.id));
+          return (
+            <div className={`focus-column ${branch.tone} ${allDone ? "done" : ""}`} key={branch.name}>
+              <h3>{branch.name}</h3>
+              <div className="focus-nodes">
+                {branch.nodes.map((node, i) => {
+                  const done = completed.has(node.id);
+                  const blocked = node.requires.some(r => !completed.has(r));
+                  const available = !done && !active && !blocked;
+                  const imgSrc = `/assets/generated/policies/${node.id}.webp`;
+                  return (
+                    <div className="focus-node-wrapper" key={node.id}>
+                      {/* connecting line from above */}
+                      {i > 0 && <span className="focus-line" />}
+                      <button
+                        className={`focus-card ${done ? "done" : available ? "available" : "locked"}`}
+                        disabled={!available}
+                        title={policyEffects[node.id]}
+                        onClick={() => onSelect(node.id)}
+                      >
+                        <img src={imgSrc} alt={node.title} loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                        <div>
+                          <b>{done && "✓ "}{node.title}</b>
+                          <small>{done ? "帝国修正已生效" : policyEffects[node.id] || "需要前置"}</small>
+                        </div>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );

@@ -129,6 +129,15 @@ export default function App() {
     if (data?.accepted) setDecree(null);
   };
 
+  const draftFromAudience = async (text: string) => {
+    const data = await act(() => api.decrees.freeform(text));
+    return data?.decree ?? null;
+  };
+  const confirmAudienceDecree = async (id: number) => {
+    const data = await act(() => api.decrees.confirm(id));
+    return !!data?.accepted;
+  };
+
   const reset = async () => {
     await act(() => api.reset());
     setResolution(null);
@@ -248,8 +257,11 @@ export default function App() {
           character={audience}
           office={snap.management.characters[audience.id]?.office}
           conversation={snap.conversation}
+          management={snap.management}
           onClose={() => setAudience(null)}
           onSecret={secret}
+          onDraft={draftFromAudience}
+          onConfirmDecree={confirmAudienceDecree}
         />
       )}
       {decree && <DecreeReview decree={decree} onConfirm={confirmDecree} onClose={() => setDecree(null)} />}

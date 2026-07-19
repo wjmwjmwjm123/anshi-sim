@@ -97,20 +97,51 @@ export function AudienceDrawer({
   character,
   office,
   conversation,
+  management,
   onClose,
   onSecret,
+  onDraft,
+  onConfirmDecree,
 }: {
   character: any;
   office?: string;
   conversation?: any;
+  management?: any;
   onClose: () => void;
   onSecret: (data: any) => Promise<any>;
+  onDraft: (text: string) => Promise<any>;
+  onConfirmDecree: (id: number) => Promise<boolean>;
 }) {
   const [topic, setTopic] = React.useState("当前最紧要之事是什么？");
   const [reply, setReply] = React.useState<any>(null);
   const [busy, setBusy] = React.useState(false);
   const [streaming, setStreaming] = React.useState(false);
   const [scene, setScene] = React.useState(character.audience_status === "remote_only" ? "远奏" : "朝堂");
+  const [draft, setDraft] = React.useState<any>(null);
+  const [draftBusy, setDraftBusy] = React.useState(false);
+  const [draftNote, setDraftNote] = React.useState("");
+  // ponytail: 复用 /api/decrees/freeform + confirm 现成管道，召见里不再手写诏书
+  const draftEdict = async () => {
+    setDraftBusy(true);
+    setDraftNote("");
+    try {
+      setDraft(await onDraft(topic));
+    } catch {
+      setDraft(null);
+    } finally {
+      setDraftBusy(false);
+    }
+  };
+  const confirmEdict = async () => {
+    if (await onConfirmDecree(draft.id)) {
+      setDraft(null);
+      setDraftNote("圣旨已颁行，诏令已入待颁队列。");
+    }
+  };
+  const targetName = (c: any) =>
+    management?.[directiveMeta[c.kind as DirectiveKind]?.domain]?.[c.target]?.name ||
+    management?.[directiveMeta[c.kind as DirectiveKind]?.domain]?.[c.target]?.title ||
+    c.subject || c.target;
   const ask = async () => {
     setBusy(true);
     setReply(null);
@@ -204,6 +235,30 @@ export function AudienceDrawer({
               </details>
             )}
           </div>
+          {draft && (
+            <div className="audience-decree-draft">
+              <b>中书已拟圣旨</b>
+              <blockquote>{draft.rendered_text || draft.text}</blockquote>
+              {draft.candidates?.length > 0 && (
+                <ul className="draft-candidates">
+                  {draft.candidates.map((c: any, i: number) => (
+                    <li key={i}>
+                      <b>{directiveMeta[c.kind as DirectiveKind]?.label || c.kind}</b>
+                      <span>{targetName(c)}{c.amount ? ` · 投入 ${c.amount}` : ""}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {draft.rejected_candidates?.length > 0 && (
+                <small className="draft-rejected">已驳回：{draft.rejected_candidates.join("；")}</small>
+              )}
+              <div className="draft-actions">
+                <button className="ask-btn" onClick={confirmEdict} disabled={draftBusy}>确认入队</button>
+                <button className="draft-drop" onClick={() => setDraft(null)}>放弃</button>
+              </div>
+            </div>
+          )}
+          {draftNote && <p className="draft-note">{draftNote}</p>}
           <div className="audience-input">
             <textarea
               value={topic}
@@ -212,6 +267,14 @@ export function AudienceDrawer({
             />
             <button className="ask-btn" onClick={ask} disabled={busy}>
               <MessageSquareText size={16} />{busy ? "候奏中" : "发送"}
+            </button>
+            <button
+              className="draft-edict-btn"
+              onClick={draftEdict}
+              disabled={busy || draftBusy || topic.trim().length < 6}
+              title="将这道旨意交中书拟成圣旨，确认后入待颁队列"
+            >
+              <FilePenLine size={16} />{draftBusy ? "中书拟旨中" : "据此拟诏"}
             </button>
             {scene === "密诏" && (
               <button
@@ -277,11 +340,12 @@ export function CouncilModal({ snap, onClose }: { snap: Snapshot; onClose: () =>
             });
           } else if (d.type === "speech_end") {
             setExchanges((prev) => {
+              const clean = (d.reply || "").replace(/<<<臣[：:][^>]+>>>/g, "");
               const last = prev[prev.length - 1];
-              if (last && last.streaming && last.name === d.name) {
-                return [...prev.slice(0, -1), { ...last, reply: d.reply || last.reply, streaming: false }];
+              if (last && last.name === d.name) {
+                return [...prev.slice(0, -1), { ...last, reply: clean || last.reply, streaming: false }];
               }
-              return [...prev, { name: d.name, reply: d.reply, streaming: false }];
+              return [...prev, { name: d.name, reply: clean, streaming: false }];
             });
           } else if (d.type === "minutes") {
             setRounds((prev) => [...prev, { round: d.round, minutes: d.text }]);

@@ -161,7 +161,7 @@ def register(router_: APIRouter, game) -> None:
             )
             yield f"data: {json.dumps({'type': 'council_start', 'topic': request.topic, 'round': round_no}, ensure_ascii=False)}\n\n"
 
-            delimiter_re = re.compile(r"<<<臣:([^>\n]+)>>>")
+            delimiter_re = re.compile(r"<<<臣[：:]([^>\n]+)>>>")
             pending_text = ""
             current_speaker = ""
             current_content: list[str] = []

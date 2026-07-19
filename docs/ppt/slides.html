@@ -1,0 +1,439 @@
+<!-- ===== 01 · P1 Cover · IKB 满屏 + ASCII ===== -->
+<section class="slide accent" data-layout="S01" data-animate="hero">
+  <div class="canvas-card">
+    <canvas class="ascii-bg" aria-hidden="true"></canvas>
+    <div class="chrome-min">
+      <div class="l">安史之乱 · AI Agent 开发实践 · Field Note</div>
+      <div class="r">SS · 26.07 · 01 / 16</div>
+    </div>
+    <div style="flex:1;padding:0;display:grid;grid-template-rows:auto 1fr auto;gap:2.6vh">
+      <div data-anim="kicker" class="t-meta" style="color:rgba(255,255,255,.78);letter-spacing:.22em">ANSHI REBELLION · 756 至 763</div>
+      <h1 data-anim="title" style="align-self:center;font-family:var(--sans),var(--sans-zh);font-weight:200;font-size:min(11.6vw,19vh);line-height:.94;letter-spacing:-.025em;color:#fff">安史之乱<br>中唐<span style="font-style:italic;font-weight:300">续命</span></h1>
+      <div data-anim="bottom" style="display:grid;grid-template-rows:auto auto;gap:1.6vh;border-top:1px solid rgba(255,255,255,.22);padding-top:2vh">
+        <div data-anim="lead" class="lead" style="max-width:56ch;color:rgba(255,255,255,.86);font-weight:300">一个对话驱动的历史策略游戏。从前期验证到工程落地，全程由 AI Agent 协作完成，包括你看到的全部立绘与插图。</div>
+        <div style="display:flex;justify-content:space-between;align-items:end">
+          <div class="t-meta" style="color:rgba(255,255,255,.6)">一人 · 一群 Agent · 2026</div>
+          <div class="t-meta" style="color:rgba(255,255,255,.6)">→ 方向键翻页</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 02 · P3 Statement · 设计论点 ===== -->
+<section class="slide hero dark" data-layout="S03" data-animate="statement-rise">
+  <div class="canvas-card" style="background:linear-gradient(rgba(10,10,10,.72),rgba(10,10,10,.72)),url({{COURT}});background-size:cover;background-position:center 30%">
+    <div class="chrome-min">
+      <div class="l">DESIGN THESIS · 设计论点</div>
+      <div class="r">02 / 16</div>
+    </div>
+    <div style="flex:1;padding:0;display:flex;flex-direction:column;justify-content:center;gap:3vh">
+      <h1 class="h-statement" style="font-family:var(--sans),var(--sans-zh);font-weight:200;font-size:min(5.8vw,10.2vh);line-height:1.02;letter-spacing:-.04em;color:#fff">
+        <span>模型管表达，</span><br>
+        <span>规则管结算。</span>
+      </h1>
+      <p style="max-width:48ch;font-family:var(--sans),var(--sans-zh);font-size:max(17px,1.4vw);line-height:1.6;font-weight:400;color:rgba(255,255,255,.8)">人物怎么说、天下怎么反应，交给语言模型。兵力、钱粮、路线、战斗这些权威数值，由本地规则算定。模型写得再像，也改不动结算结果。</p>
+      <span class="t-meta" style="color:rgba(255,255,255,.55)">STATEMENT · 02</span>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 03 · P22 Image Hero · 紫宸殿 ===== -->
+<section class="slide light" data-layout="S22" data-animate="image-hero">
+  <div class="canvas-card" style="padding:0;display:flex;flex-direction:column;overflow:hidden">
+    <div data-anim="img" style="position:relative;flex:0 0 60%;overflow:hidden;background:var(--grey-1)">
+      <img src="{{COURT}}" alt="紫宸殿朝堂" loading="eager" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 30%">
+      <div class="chrome-min" style="position:absolute;top:0;left:0;right:0;color:rgba(255,255,255,.9);padding:5.6vh 5vw 0">
+        <div class="l">THE GAME · 紫宸殿朝堂</div>
+        <div class="r">03 / 16</div>
+      </div>
+      <div data-anim="title-block" style="position:absolute;left:5vw;top:11vh;background:var(--paper);padding:3.2vh 3.2vw;max-width:40vw">
+        <div style="font-family:var(--sans),var(--sans-zh);font-weight:200;font-size:min(5.2vw,9vh);line-height:1;letter-spacing:-.035em;color:var(--text-primary)">紫宸殿<br>朝堂</div>
+      </div>
+    </div>
+    <div data-anim="kpi" class="image-hero-body" style="flex:1;padding:4vh 5vw 4.4vh;display:grid;grid-template-rows:auto 1fr;gap:3vh">
+      <div style="max-width:60ch;font-family:var(--sans),var(--sans-zh);font-size:max(15px,1.3vw);line-height:1.55;font-weight:400;color:var(--text-primary)">天宝十五载，渔阳鼙鼓动地来。你扮演大唐最高决策者，通过召见、廷议、密诏与御笔诏书，重新推动这台失序的国家机器。</div>
+      <div class="image-hero-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4vw;align-items:stretch">
+        <div style="display:flex;flex-direction:column;gap:.6vh"><div style="height:1px;background:var(--ink)"></div><div class="t-meta">CHARACTERS</div><div style="font-family:var(--sans);font-weight:200;font-size:min(4.6vw,7.6vh);line-height:.95;letter-spacing:-.04em">43</div><div style="height:1px;background:var(--border-subtle);margin-top:auto"></div><p style="font-size:max(14px,.9vw);font-weight:400;color:var(--text-secondary)">位人物，覆盖三省六部与边镇燕廷</p></div>
+        <div style="display:flex;flex-direction:column;gap:.6vh"><div style="height:1px;background:var(--ink)"></div><div class="t-meta">EVENTS</div><div style="font-family:var(--sans);font-weight:200;font-size:min(4.6vw,7.6vh);line-height:.95;letter-spacing:-.04em">16</div><div style="height:1px;background:var(--border-subtle);margin-top:auto"></div><p style="font-size:max(14px,.9vw);font-weight:400;color:var(--text-secondary)">张事件插图，五幕关键节点</p></div>
+        <div style="display:flex;flex-direction:column;gap:.6vh"><div style="height:1px;background:var(--ink)"></div><div class="t-meta">ACTS</div><div style="font-family:var(--sans);font-weight:200;font-size:min(4.6vw,7.6vh);line-height:.95;letter-spacing:-.04em;color:var(--accent)">5</div><div style="height:1px;background:var(--border-subtle);margin-top:auto"></div><p style="font-size:max(14px,.9vw);font-weight:400;color:var(--text-secondary)">幕战役，从潼关危局到天下渐定</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 04 · P4 Six Cells · 六大玩法 ===== -->
+<section class="slide dark" data-layout="S04" data-animate="six-cells">
+  <div class="canvas-card">
+    <div class="chrome-min">
+      <div class="l">GAMEPLAY · 核心玩法</div>
+      <div class="r">04 / 16</div>
+    </div>
+    <div style="flex:1;padding:0;display:grid;grid-template-rows:auto 1fr;gap:5vh">
+      <div data-anim="head" style="display:flex;flex-direction:column;gap:1.4vh">
+        <div class="t-meta">SIX WAYS TO PLAY</div>
+        <h2 style="font-family:var(--sans),var(--sans-zh);font-weight:200;font-size:min(6.4vw,11.2vh);line-height:.96;letter-spacing:-.035em;color:var(--text-primary)">六种玩法</h2>
+      </div>
+      <div class="cell-6" style="display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:1px;background:var(--border-subtle)">
+        <div class="cell" style="background:rgba(255,255,255,.06);padding:2.6vh 1.6vw;display:flex;flex-direction:column;gap:1vh"><i data-lucide="messages-square" style="color:var(--accent)"></i><span class="cell-num" style="font-family:var(--mono);font-size:13px;color:var(--text-helper)">01</span><h4 style="font-weight:500;font-size:max(17px,1.5vw)">紫宸殿奏对</h4><p style="font-weight:400;font-size:max(15px,1vw);color:var(--text-secondary);line-height:1.5">朝堂、密诏、远奏三种场景，人物反应各不相同。</p></div>
+        <div class="cell" style="background:rgba(255,255,255,.06);padding:2.6vh 1.6vw;display:flex;flex-direction:column;gap:1vh"><i data-lucide="users" style="color:var(--accent)"></i><span class="cell-num" style="font-family:var(--mono);font-size:13px;color:var(--text-helper)">02</span><h4 style="font-weight:500;font-size:max(17px,1.5vw)">廷议集议</h4><p style="font-weight:400;font-size:max(15px,1vw);color:var(--text-secondary);line-height:1.5">选二至六人入殿，单次调用生成整场辩论。</p></div>
+        <div class="cell" style="background:rgba(255,255,255,.06);padding:2.6vh 1.6vw;display:flex;flex-direction:column;gap:1vh"><i data-lucide="scroll-text" style="color:var(--accent)"></i><span class="cell-num" style="font-family:var(--mono);font-size:13px;color:var(--text-helper)">03</span><h4 style="font-weight:500;font-size:max(17px,1.5vw)">御笔拟诏</h4><p style="font-weight:400;font-size:max(15px,1vw);color:var(--text-secondary);line-height:1.5">自由写下旨意，文书模型润色为唐廷风格圣旨。</p></div>
+        <div class="cell" style="background:rgba(255,255,255,.06);padding:2.6vh 1.6vw;display:flex;flex-direction:column;gap:1vh"><i data-lucide="sword" style="color:var(--accent)"></i><span class="cell-num" style="font-family:var(--mono);font-size:13px;color:var(--text-helper)">04</span><h4 style="font-weight:500;font-size:max(17px,1.5vw)">军令调度</h4><p style="font-weight:400;font-size:max(15px,1vw);color:var(--text-secondary);line-height:1.5">十六地区地图，调兵、会战、围城与补给。</p></div>
+        <div class="cell" style="background:rgba(255,255,255,.06);padding:2.6vh 1.6vw;display:flex;flex-direction:column;gap:1vh"><i data-lucide="landmark" style="color:var(--accent)"></i><span class="cell-num" style="font-family:var(--mono);font-size:13px;color:var(--text-helper)">05</span><h4 style="font-weight:500;font-size:max(17px,1.5vw)">国策经略</h4><p style="font-weight:400;font-size:max(15px,1vw);color:var(--text-secondary);line-height:1.5">中枢、军镇、河朔、财赋四条经略分支。</p></div>
+        <div class="cell" style="background:rgba(255,255,255,.06);padding:2.6vh 1.6vw;display:flex;flex-direction:column;gap:1vh"><i data-lucide="brain" style="color:var(--accent)"></i><span class="cell-num" style="font-family:var(--mono);font-size:13px;color:var(--text-helper)">06</span><h4 style="font-weight:500;font-size:max(17px,1.5vw)">人物记忆</h4><p style="font-weight:400;font-size:max(15px,1vw);color:var(--text-secondary);line-height:1.5">每回合自动提炼，按重要度衰减与召回。</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 05 · P15 Image Matrix · 人物立绘墙 ===== -->
+<section class="slide light" data-layout="S15" data-animate="matrix-fill">
+  <div class="canvas-card">
+    <div class="chrome-min">
+      <div class="l">AI ART · 人物立绘 · seedream</div>
+      <div class="r">05 / 16</div>
+    </div>
+    <div style="flex:1;padding:0;display:grid;grid-template-rows:auto 1fr auto;gap:3.4vh">
+      <div data-anim="head" style="display:flex;flex-direction:column;gap:1.2vh">
+        <div class="t-meta">CHARACTERS · GENERATED BY SEEDREAM</div>
+        <h2 style="font-family:var(--sans),var(--sans-zh);font-weight:200;font-size:min(5.8vw,10.2vh);line-height:.96;letter-spacing:-.035em;color:var(--text-primary)">四十三位人物</h2>
+      </div>
+      <div data-anim="matrix" style="display:grid;grid-template-columns:repeat(6,1fr);grid-template-rows:repeat(2,1fr);gap:1vw;min-height:0">
+        <figure style="position:relative;overflow:hidden;margin:0;background:var(--grey-1)"><img src="{{P_XUANZONG}}" alt="玄宗" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 18%"><figcaption style="position:absolute;left:0;right:0;bottom:0;padding:.5vh .5vw;background:rgba(10,10,10,.6);color:#fff;font-size:max(12px,.72vw);font-weight:500">玄宗</figcaption></figure>
+        <figure style="position:relative;overflow:hidden;margin:0;background:var(--grey-1)"><img src="{{P_GAOLISHI}}" alt="高力士" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 18%"><figcaption style="position:absolute;left:0;right:0;bottom:0;padding:.5vh .5vw;background:rgba(10,10,10,.6);color:#fff;font-size:max(12px,.72vw);font-weight:500">高力士</figcaption></figure>
+        <figure style="position:relative;overflow:hidden;margin:0;background:var(--grey-1)"><img src="{{P_YANGGUOZHONG}}" alt="杨国忠" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 18%"><figcaption style="position:absolute;left:0;right:0;bottom:0;padding:.5vh .5vw;background:rgba(10,10,10,.6);color:#fff;font-size:max(12px,.72vw);font-weight:500">杨国忠</figcaption></figure>
+        <figure style="position:relative;overflow:hidden;margin:0;background:var(--grey-1)"><img src="{{P_GESHUHAN}}" alt="哥舒翰" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 18%"><figcaption style="position:absolute;left:0;right:0;bottom:0;padding:.5vh .5vw;background:rgba(10,10,10,.6);color:#fff;font-size:max(12px,.72vw);font-weight:500">哥舒翰</figcaption></figure>
+        <figure style="position:relative;overflow:hidden;margin:0;background:var(--grey-1)"><img src="{{P_GUOZIYI}}" alt="郭子仪" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 18%"><figcaption style="position:absolute;left:0;right:0;bottom:0;padding:.5vh .5vw;background:rgba(10,10,10,.6);color:#fff;font-size:max(12px,.72vw);font-weight:500">郭子仪</figcaption></figure>
+        <figure style="position:relative;overflow:hidden;margin:0;background:var(--grey-1)"><img src="{{P_LIGUANGBI}}" alt="李光弼" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 18%"><figcaption style="position:absolute;left:0;right:0;bottom:0;padding:.5vh .5vw;background:rgba(10,10,10,.6);color:#fff;font-size:max(12px,.72vw);font-weight:500">李光弼</figcaption></figure>
+        <figure style="position:relative;overflow:hidden;margin:0;background:var(--grey-1)"><img src="{{P_LIHENG}}" alt="李亨" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 18%"><figcaption style="position:absolute;left:0;right:0;bottom:0;padding:.5vh .5vw;background:rgba(10,10,10,.6);color:#fff;font-size:max(12px,.72vw);font-weight:500">李亨</figcaption></figure>
+        <figure style="position:relative;overflow:hidden;margin:0;background:var(--grey-1)"><img src="{{P_ANLUSHAN}}" alt="安禄山" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 18%"><figcaption style="position:absolute;left:0;right:0;bottom:0;padding:.5vh .5vw;background:rgba(10,10,10,.6);color:#fff;font-size:max(12px,.72vw);font-weight:500">安禄山</figcaption></figure>
+        <figure style="position:relative;overflow:hidden;margin:0;background:var(--grey-1)"><img src="{{P_ANQINGXU}}" alt="安庆绪" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 18%"><figcaption style="position:absolute;left:0;right:0;bottom:0;padding:.5vh .5vw;background:rgba(10,10,10,.6);color:#fff;font-size:max(12px,.72vw);font-weight:500">安庆绪</figcaption></figure>
+        <figure style="position:relative;overflow:hidden;margin:0;background:var(--grey-1)"><img src="{{P_SHISIMING}}" alt="史思明" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 18%"><figcaption style="position:absolute;left:0;right:0;bottom:0;padding:.5vh .5vw;background:rgba(10,10,10,.6);color:#fff;font-size:max(12px,.72vw);font-weight:500">史思明</figcaption></figure>
+        <figure style="position:relative;overflow:hidden;margin:0;background:var(--grey-1)"><img src="{{P_LIBI}}" alt="李泌" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 18%"><figcaption style="position:absolute;left:0;right:0;bottom:0;padding:.5vh .5vw;background:rgba(10,10,10,.6);color:#fff;font-size:max(12px,.72vw);font-weight:500">李泌</figcaption></figure>
+        <figure style="position:relative;overflow:hidden;margin:0;background:var(--grey-1)"><img src="{{P_WANGSILI}}" alt="王思礼" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 18%"><figcaption style="position:absolute;left:0;right:0;bottom:0;padding:.5vh .5vw;background:rgba(10,10,10,.6);color:#fff;font-size:max(12px,.72vw);font-weight:500">王思礼</figcaption></figure>
+      </div>
+      <div data-anim="hero" style="display:flex;align-items:baseline;gap:1.6vw;border-top:1px solid var(--border-subtle);padding-top:2vh">
+        <span style="font-family:var(--sans);font-weight:200;font-size:min(6.4vw,11vh);line-height:.85;letter-spacing:-.04em;color:var(--accent)">43</span>
+        <span style="font-family:var(--sans),var(--sans-zh);font-weight:400;font-size:max(15px,1.1vw);color:var(--text-secondary);max-width:44ch">位人物，由 seedream 逐张生成。上图为其中十二位，从玄宗、高力士到郭子仪、李泌，再到燕廷的安禄山与史思明。</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 06 · P16 Image Grid · 事件插图书 ===== -->
+<section class="slide dark" data-layout="S16" data-animate="field-notes">
+  <div class="canvas-card">
+    <div class="chrome-min">
+      <div class="l">AI ART · 事件插图 · seedream</div>
+      <div class="r">06 / 16</div>
+    </div>
+    <div style="flex:1;padding:0;display:grid;grid-template-rows:auto 1fr auto;gap:3.4vh">
+      <div data-anim="head" style="display:flex;flex-direction:column;gap:1.2vh">
+        <div class="t-meta">EVENTS · GENERATED BY SEEDREAM</div>
+        <h2 style="font-family:var(--sans),var(--sans-zh);font-weight:200;font-size:min(5.8vw,10.2vh);line-height:.96;letter-spacing:-.035em;color:var(--text-primary)">十六张事件插图</h2>
+      </div>
+      <div data-anim="grid" style="display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:1.4vw;min-height:0">
+        <figure style="display:flex;flex-direction:column;overflow:hidden;margin:0;background:var(--grey-1)"><div style="position:relative;flex:1;min-height:0"><img src="{{E_LINGBAO}}" alt="灵宝之战" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div><figcaption style="padding:1vh .8vw;font-size:max(14px,.9vw);font-weight:500;color:var(--text-primary)">灵宝之战</figcaption></figure>
+        <figure style="display:flex;flex-direction:column;overflow:hidden;margin:0;background:var(--grey-1)"><div style="position:relative;flex:1;min-height:0"><img src="{{E_MAWEI}}" alt="马嵬之变" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div><figcaption style="padding:1vh .8vw;font-size:max(14px,.9vw);font-weight:500;color:var(--text-primary)">马嵬之变</figcaption></figure>
+        <figure style="display:flex;flex-direction:column;overflow:hidden;margin:0;background:var(--grey-1)"><div style="position:relative;flex:1;min-height:0"><img src="{{E_TONGGUAN}}" alt="潼关坚守" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div><figcaption style="padding:1vh .8vw;font-size:max(14px,.9vw);font-weight:500;color:var(--text-primary)">潼关坚守</figcaption></figure>
+        <figure style="display:flex;flex-direction:column;overflow:hidden;margin:0;background:var(--grey-1)"><div style="position:relative;flex:1;min-height:0"><img src="{{E_SUIYANG}}" alt="睢阳之战" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div><figcaption style="padding:1vh .8vw;font-size:max(14px,.9vw);font-weight:500;color:var(--text-primary)">睢阳之战</figcaption></figure>
+        <figure style="display:flex;flex-direction:column;overflow:hidden;margin:0;background:var(--grey-1)"><div style="position:relative;flex:1;min-height:0"><img src="{{E_RECAPTURE}}" alt="收复两京" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div><figcaption style="padding:1vh .8vw;font-size:max(14px,.9vw);font-weight:500;color:var(--text-primary)">收复两京</figcaption></figure>
+        <figure style="display:flex;flex-direction:column;overflow:hidden;margin:0;background:var(--grey-1)"><div style="position:relative;flex:1;min-height:0"><img src="{{E_UIGHUR}}" alt="回纥盟约" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div><figcaption style="padding:1vh .8vw;font-size:max(14px,.9vw);font-weight:500;color:var(--text-primary)">回纥盟约</figcaption></figure>
+      </div>
+      <div data-anim="hero" style="display:flex;align-items:baseline;gap:1.6vw;border-top:1px solid var(--border-subtle);padding-top:2vh">
+        <span style="font-family:var(--sans);font-weight:200;font-size:min(6.4vw,11vh);line-height:.85;letter-spacing:-.04em;color:var(--accent)">16</span>
+        <span style="font-family:var(--sans),var(--sans-zh);font-weight:400;font-size:max(15px,1.1vw);color:var(--text-secondary);max-width:44ch">张事件插图，全部由 seedream 生成，对应五幕里的关键节点。上图为其中六幅。</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 07 · P11 Horizontal Timeline · 推演流水线 ===== -->
+<section class="slide light" data-layout="S11" data-animate="timeline-walk">
+  <div class="canvas-card">
+    <div class="chrome-min">
+      <div class="l">ARCHITECTURE · 推演架构</div>
+      <div class="r">07 / 16</div>
+    </div>
+    <div style="flex:1;padding:0;display:grid;grid-template-rows:auto auto 1fr;gap:4vh">
+      <div data-anim="head" style="display:flex;flex-direction:column;gap:1.4vh">
+        <div class="t-meta">HOW A TURN RESOLVES</div>
+        <h2 style="font-family:var(--sans),var(--sans-zh);font-weight:200;font-size:min(5.8vw,10.2vh);line-height:.96;letter-spacing:-.035em;color:var(--text-primary)">一个回合怎么结算</h2>
+      </div>
+      <p data-anim="lead" style="max-width:60ch;font-family:var(--sans),var(--sans-zh);font-size:max(16px,1.3vw);line-height:1.6;font-weight:400;color:var(--text-secondary)">权威结果先由规则算出，模型只读结果写叙事，不允许叙事反过来改状态。</p>
+      <div data-anim="timeline" style="position:relative;display:grid;grid-template-columns:repeat(5,1fr);align-items:start;padding-top:6vh">
+        <span style="position:absolute;left:0;right:0;top:6vh;height:1px;background:var(--border-subtle)"></span>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1.4vh;text-align:center"><span style="font-family:var(--mono);font-size:13px;color:var(--text-helper)">01</span><span style="width:10px;height:10px;background:var(--accent)"></span><span style="font-family:var(--sans),var(--sans-zh);font-weight:500;font-size:max(15px,1.1vw);color:var(--text-primary)">冻结快照</span><span style="font-size:max(13px,.86vw);font-weight:400;color:var(--text-secondary);max-width:18ch">兵力、钱粮、路线与战斗状态，由确定性规则先行计算</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1.4vh;text-align:center"><span style="font-family:var(--mono);font-size:13px;color:var(--text-helper)">02</span><span style="width:10px;height:10px;background:var(--accent)"></span><span style="font-family:var(--sans),var(--sans-zh);font-weight:500;font-size:max(15px,1.1vw);color:var(--text-primary)">推演提案</span><span style="font-size:max(13px,.86vw);font-weight:400;color:var(--text-secondary);max-width:18ch">模型读取规则结果，生成 JSON 提案与邸报叙事，一并产出</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1.4vh;text-align:center"><span style="font-family:var(--mono);font-size:13px;color:var(--text-helper)">03</span><span style="width:10px;height:10px;background:var(--accent)"></span><span style="font-family:var(--sans),var(--sans-zh);font-weight:500;font-size:max(15px,1.1vw);color:var(--text-primary)">本地校验</span><span style="font-size:max(13px,.86vw);font-weight:400;color:var(--text-secondary);max-width:18ch">白名单、目标范围与幅度上限，越权或超限直接拒绝</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1.4vh;text-align:center"><span style="font-family:var(--mono);font-size:13px;color:var(--text-helper)">04</span><span style="width:10px;height:10px;background:var(--accent)"></span><span style="font-family:var(--sans),var(--sans-zh);font-weight:500;font-size:max(15px,1.1vw);color:var(--text-primary)">写入裁决</span><span style="font-size:max(13px,.86vw);font-weight:400;color:var(--text-secondary);max-width:18ch">民心、动乱、士气、补给、忠诚，允许的写入，拒绝的回滚</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1.4vh;text-align:center"><span style="font-family:var(--mono);font-size:13px;color:var(--text-helper)">05</span><span style="width:10px;height:10px;background:var(--accent)"></span><span style="font-family:var(--sans),var(--sans-zh);font-weight:500;font-size:max(15px,1.1vw);color:var(--text-primary)">史官纪事</span><span style="font-size:max(13px,.86vw);font-weight:400;color:var(--text-secondary);max-width:18ch">自动存档，可回放，相同输入必得相同输出</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 08 · P10 Dot Matrix Statement · 转折 ===== -->
+<section class="slide hero dark" data-layout="S10" data-animate="matrix-statement">
+  <div class="canvas-card">
+    <span class="ring-mat" style="left:4vw;bottom:6vh;width:18vw;height:18vw;opacity:.5"></span>
+    <span class="dot-mat" style="right:0;top:0;width:34vw;height:34vw;opacity:.5"></span>
+    <div class="chrome-min">
+      <div class="l">THE BUILD · 怎么做出来的</div>
+      <div class="r">08 / 16</div>
+    </div>
+    <div style="flex:1;padding:0;display:flex;flex-direction:column;justify-content:center;gap:3vh;position:relative;z-index:1">
+      <h1 class="h-statement" style="font-family:var(--sans),var(--sans-zh);font-weight:200;font-size:min(5.2vw,9.2vh);line-height:1.04;letter-spacing:-.04em;color:var(--text-primary)">
+        <span>一个人，</span><br>
+        <span>一群 Agent，</span><br>
+        <span>一台国家机器。</span>
+      </h1>
+      <span class="t-meta" style="color:var(--text-helper)">TURNING POINT · 08</span>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 09 · P8 Duo Compare · Codex vs Claude Code ===== -->
+<section class="slide light" data-layout="S08" data-animate="duo-mirror">
+  <div class="canvas-card">
+    <div class="chrome-min">
+      <div class="l">TOOLCHAIN · 两个工具的分工</div>
+      <div class="r">09 / 16</div>
+    </div>
+    <div style="flex:1;padding:0;display:grid;grid-template-rows:auto 1fr auto;gap:4vh">
+      <div data-anim="head" style="display:flex;flex-direction:column;gap:1.2vh">
+        <div class="t-meta">VALIDATE THEN BUILD</div>
+        <h2 style="font-family:var(--sans),var(--sans-zh);font-weight:200;font-size:min(5.8vw,10.2vh);line-height:.96;letter-spacing:-.035em;color:var(--text-primary)">先验证，再落地</h2>
+      </div>
+      <div class="duo-compare" style="display:grid;grid-template-columns:1fr auto 1fr;gap:3vw;align-items:stretch">
+        <div class="duo-half" style="display:flex;flex-direction:column;gap:1.6vh">
+          <span class="t-cat" style="color:var(--text-helper)">前期 · CODEX</span>
+          <h3 style="font-family:var(--sans),var(--sans-zh);font-weight:200;font-size:min(4.4vw,7.8vh);line-height:.95;letter-spacing:-.03em;color:var(--text-primary)">验证</h3>
+          <p style="font-family:var(--sans),var(--sans-zh);font-weight:400;font-size:max(16px,1.2vw);line-height:1.6;color:var(--text-secondary)">拆需求，验可行性，跑通概念原型。先确认这条路能走，再投入工程。</p>
+        </div>
+        <span class="vrule" style="width:1px;background:var(--border-subtle)"></span>
+        <div class="duo-half" style="display:flex;flex-direction:column;gap:1.6vh">
+          <span class="t-cat" style="color:var(--accent)">主编码 · CLAUDE CODE</span>
+          <h3 style="font-family:var(--sans),var(--sans-zh);font-weight:200;font-size:min(4.4vw,7.8vh);line-height:.95;letter-spacing:-.03em;color:var(--text-primary)">落地</h3>
+          <p style="font-family:var(--sans),var(--sans-zh);font-weight:400;font-size:max(16px,1.2vw);line-height:1.6;color:var(--text-secondary)">工程实现，拆分重构，补上测试。把能想清楚的原型，变成能稳定跑的产品。</p>
+        </div>
+      </div>
+      <div data-anim="foot" style="border-top:1px solid var(--border-subtle);padding-top:2vh;display:flex;flex-wrap:wrap;gap:.6vw 2vw;font-family:var(--mono);font-size:max(13px,.86vw);color:var(--text-helper)">
+        <span>模型 · gpt5.6sol</span><span>deepseek-v4pro</span><span>kimi-k2.7</span><span>qwen3.8max</span><span>momi / mimo</span><span style="color:var(--accent)">图像 · seedream</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 10 · P15 Image Matrix · 过程截图 2x2 ===== -->
+<section class="slide light" data-layout="S15" data-animate="matrix-fill">
+  <div class="canvas-card">
+    <div class="chrome-min">
+      <div class="l">EVIDENCE · 开发留痕</div>
+      <div class="r">10 / 16</div>
+    </div>
+    <div style="flex:1;padding:0;display:grid;grid-template-rows:auto 1fr;gap:3.4vh">
+      <div data-anim="head" style="display:flex;flex-direction:column;gap:1.2vh">
+        <div class="t-meta">PROCESS · 截图为证</div>
+        <h2 style="font-family:var(--sans),var(--sans-zh);font-weight:200;font-size:min(5.8vw,10.2vh);line-height:.96;letter-spacing:-.035em;color:var(--text-primary)">全程都有记录</h2>
+      </div>
+      <div data-anim="matrix" style="display:grid;grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr);gap:1.6vw;min-height:0">
+        <figure style="display:flex;flex-direction:column;overflow:hidden;margin:0;background:#fff;border:1px solid var(--border-subtle)"><div style="flex:1;min-height:0;padding:1vh"><img src="{{S_CODEX_CODE}}" alt="Codex 编码" style="width:100%;height:100%;object-fit:contain"></div><figcaption style="padding:.9vh .9vw;border-top:1px solid var(--border-subtle);font-size:max(14px,.9vw);font-weight:500;color:var(--text-primary)">Codex · 编码中</figcaption></figure>
+        <figure style="display:flex;flex-direction:column;overflow:hidden;margin:0;background:#fff;border:1px solid var(--border-subtle)"><div style="flex:1;min-height:0;padding:1vh"><img src="{{S_CODEX_AGENT}}" alt="Codex 子 Agent" style="width:100%;height:100%;object-fit:contain"></div><figcaption style="padding:.9vh .9vw;border-top:1px solid var(--border-subtle);font-size:max(14px,.9vw);font-weight:500;color:var(--text-primary)">Codex · 子 Agent 并行</figcaption></figure>
+        <figure style="display:flex;flex-direction:column;overflow:hidden;margin:0;background:#fff;border:1px solid var(--border-subtle)"><div style="flex:1;min-height:0;padding:1vh"><img src="{{S_CLAUDE}}" alt="Claude Code" style="width:100%;height:100%;object-fit:contain"></div><figcaption style="padding:.9vh .9vw;border-top:1px solid var(--border-subtle);font-size:max(14px,.9vw);font-weight:500;color:var(--text-primary)">Claude Code · 主编码</figcaption></figure>
+        <figure style="display:flex;flex-direction:column;overflow:hidden;margin:0;background:#fff;border:1px solid var(--border-subtle)"><div style="flex:1;min-height:0;padding:1vh"><img src="{{S_GITHUB}}" alt="GitHub 提交" style="width:100%;height:100%;object-fit:contain"></div><figcaption style="padding:.9vh .9vw;border-top:1px solid var(--border-subtle);font-size:max(14px,.9vw);font-weight:500;color:var(--text-primary)">GitHub · 提交记录</figcaption></figure>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 11 · P2 Vertical Timeline · 工具链演化 ===== -->
+<section class="slide dark" data-layout="S02" data-animate="timeline-vertical">
+  <div class="canvas-card">
+    <div class="chrome-min">
+      <div class="l">EVOLUTION · 从验证到产品</div>
+      <div class="r">11 / 16</div>
+    </div>
+    <div style="flex:1;padding:0;display:grid;grid-template-rows:auto 1fr auto;gap:3.4vh">
+      <div data-anim="head" style="display:flex;flex-direction:column;gap:1.2vh">
+        <div class="t-meta">FOUR STAGES</div>
+        <h2 style="font-family:var(--sans),var(--sans-zh);font-weight:200;font-size:min(5.8vw,10.2vh);line-height:.96;letter-spacing:-.035em;color:var(--text-primary)">四个阶段</h2>
+      </div>
+      <div data-anim="timeline" style="display:grid;grid-template-columns:12px 1fr;column-gap:2vw;row-gap:2.4vh">
+        <div style="position:relative"><span style="position:absolute;left:50%;top:.6vh;transform:translateX(-50%);width:10px;height:10px;background:var(--accent)"></span><span style="position:absolute;left:50%;top:1.6vh;bottom:-2.4vh;transform:translateX(-50%);width:1px;border-left:1px dashed var(--border-subtle)"></span></div>
+        <div style="display:grid;grid-template-columns:auto 1fr;column-gap:1.6vw;align-items:baseline"><span style="font-family:var(--sans);font-weight:200;font-size:min(3.6vw,6.4vh);line-height:.9;color:var(--accent)">0→1</span><div><h4 style="font-weight:500;font-size:max(17px,1.4vw);color:var(--text-primary)">Codex 前期验证</h4><p style="font-weight:400;font-size:max(15px,1vw);color:var(--text-secondary);line-height:1.5">拆需求、验可行性，确认 AI 能扛起这套系统。</p></div></div>
+        <div style="position:relative"><span style="position:absolute;left:50%;top:.6vh;transform:translateX(-50%);width:10px;height:10px;background:var(--accent)"></span><span style="position:absolute;left:50%;top:1.6vh;bottom:-2.4vh;transform:translateX(-50%);width:1px;border-left:1px dashed var(--border-subtle)"></span></div>
+        <div style="display:grid;grid-template-columns:auto 1fr;column-gap:1.6vw;align-items:baseline"><span style="font-family:var(--sans);font-weight:200;font-size:min(3.6vw,6.4vh);line-height:.9;color:var(--text-primary)">881→177</span><div><h4 style="font-weight:500;font-size:max(17px,1.4vw);color:var(--text-primary)">Claude Code 主编码</h4><p style="font-weight:400;font-size:max(15px,1vw);color:var(--text-secondary);line-height:1.5">main.py 从 881 行拆到 177 行，按领域分模块。</p></div></div>
+        <div style="position:relative"><span style="position:absolute;left:50%;top:.6vh;transform:translateX(-50%);width:10px;height:10px;background:var(--accent)"></span><span style="position:absolute;left:50%;top:1.6vh;bottom:-2.4vh;transform:translateX(-50%);width:1px;border-left:1px dashed var(--border-subtle)"></span></div>
+        <div style="display:grid;grid-template-columns:auto 1fr;column-gap:1.6vw;align-items:baseline"><span style="font-family:var(--sans);font-weight:200;font-size:min(3.6vw,6.4vh);line-height:.9;color:var(--text-primary)">3 角色</span><div><h4 style="font-weight:500;font-size:max(17px,1.4vw);color:var(--text-primary)">多模型协作</h4><p style="font-weight:400;font-size:max(15px,1vw);color:var(--text-secondary);line-height:1.5">人物、推演、文书三角色，按场景在多个模型间切换。</p></div></div>
+        <div style="position:relative"><span style="position:absolute;left:50%;top:.6vh;transform:translateX(-50%);width:10px;height:10px;background:var(--accent)"></span></div>
+        <div style="display:grid;grid-template-columns:auto 1fr;column-gap:1.6vw;align-items:baseline"><span style="font-family:var(--sans);font-weight:200;font-size:min(3.6vw,6.4vh);line-height:.9;color:var(--text-primary)">+3 模块</span><div><h4 style="font-weight:500;font-size:max(17px,1.4vw);color:var(--text-primary)">v0.6.0 升级</h4><p style="font-weight:400;font-size:max(15px,1vw);color:var(--text-secondary);line-height:1.5">加上 Agent 运行时、人物记忆与长期局势追踪。</p></div></div>
+      </div>
+      <div data-anim="kpi" style="display:grid;grid-template-columns:repeat(4,1fr);gap:2vw;border-top:1px solid var(--border-subtle);padding-top:2vh">
+        <div><div class="t-meta">FULL STACK</div><div style="font-family:var(--sans);font-weight:200;font-size:min(3.2vw,5.6vh);color:var(--text-primary)">1 人</div></div>
+        <div><div class="t-meta">MODELS</div><div style="font-family:var(--sans);font-weight:200;font-size:min(3.2vw,5.6vh);color:var(--text-primary)">5+</div></div>
+        <div><div class="t-meta">MODULES</div><div style="font-family:var(--sans);font-weight:200;font-size:min(3.2vw,5.6vh);color:var(--text-primary)">15</div></div>
+        <div><div class="t-meta">TESTS</div><div style="font-family:var(--sans);font-weight:200;font-size:min(3.2vw,5.6vh);color:var(--accent)">64</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 12 · P19 Four Cards · 四处工程细节 ===== -->
+<section class="slide light" data-layout="S19" data-animate="four-cards">
+  <div class="canvas-card">
+    <div class="chrome-min">
+      <div class="l">ENGINEERING · 我较真的地方</div>
+      <div class="r">12 / 16</div>
+    </div>
+    <div style="flex:1;padding:0;display:grid;grid-template-rows:auto 1fr;gap:5vh">
+      <div data-anim="head" style="display:flex;flex-direction:column;gap:1.6vh">
+        <span style="width:80px;height:3px;background:var(--accent)"></span>
+        <h2 style="font-family:var(--sans),var(--sans-zh);font-weight:200;font-size:min(5.2vw,9.2vh);line-height:.98;letter-spacing:-.035em;color:var(--text-primary)">四处工程细节</h2>
+      </div>
+      <div data-anim="cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:1.6vw;align-items:start">
+        <div style="display:flex;flex-direction:column;gap:1.2vh;border-top:1px solid var(--ink);padding-top:1.6vh"><div class="t-meta" style="color:var(--text-helper)">01 / ADAPTER</div><i data-lucide="plug" style="color:var(--accent)"></i><h4 style="font-weight:500;font-size:max(17px,1.5vw);color:var(--text-primary)">供应商自适应</h4><p style="font-weight:400;font-size:max(15px,1vw);color:var(--text-secondary);line-height:1.55">一个 OpenAI 兼容接口，自动识别 DeepSeek、DashScope、MiniMax 并注入对应参数。</p></div>
+        <div style="display:flex;flex-direction:column;gap:1.2vh;border-top:1px solid var(--ink);padding-top:1.6vh"><div class="t-meta" style="color:var(--text-helper)">02 / ROUTING</div><i data-lucide="route" style="color:var(--accent)"></i><h4 style="font-weight:500;font-size:max(17px,1.5vw);color:var(--text-primary)">三角色模型路由</h4><p style="font-weight:400;font-size:max(15px,1vw);color:var(--text-secondary);line-height:1.55">人物、推演、文书各走各的配置，可以独立更换供应商与模型。</p></div>
+        <div style="display:flex;flex-direction:column;gap:1.2vh;border-top:1px solid var(--ink);padding-top:1.6vh"><div class="t-meta" style="color:var(--text-helper)">03 / STREAMING</div><i data-lucide="radio" style="color:var(--accent)"></i><h4 style="font-weight:500;font-size:max(17px,1.5vw);color:var(--text-primary)">真流式编排</h4><p style="font-weight:400;font-size:max(15px,1vw);color:var(--text-secondary);line-height:1.55">SSE 逐字输出。廷议剧本单次调用，边写边分到各位大臣头上。</p></div>
+        <div style="display:flex;flex-direction:column;gap:1.2vh;border-top:1px solid var(--ink);padding-top:1.6vh"><div class="t-meta" style="color:var(--text-helper)">04 / RUNTIME</div><i data-lucide="cpu" style="color:var(--accent)"></i><h4 style="font-weight:500;font-size:max(17px,1.5vw);color:var(--text-primary)">零依赖 Agent 运行时</h4><p style="font-weight:400;font-size:max(15px,1vw);color:var(--text-secondary);line-height:1.55">不引第三方库，自带 session 记忆与 tool-use 循环，模型能自查盘面。</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 13 · P6 KPI Tower · 成果数据 ===== -->
+<section class="slide dark" data-layout="S06" data-animate="tower-grow">
+  <div class="canvas-card">
+    <div class="chrome-min">
+      <div class="l">OUTPUT · 做到什么程度</div>
+      <div class="r">13 / 16</div>
+    </div>
+    <div style="flex:1;padding:0;display:grid;grid-template-rows:auto 1fr;gap:4vh">
+      <div data-anim="head" style="display:grid;grid-template-columns:1fr auto;gap:3vw;align-items:end">
+        <div style="display:flex;flex-direction:column;gap:1.2vh">
+          <div class="t-meta">BY THE NUMBERS</div>
+          <h2 style="font-family:var(--sans),var(--sans-zh);font-weight:200;font-size:min(5.8vw,10.2vh);line-height:.96;letter-spacing:-.035em;color:var(--text-primary)">规模一览</h2>
+        </div>
+        <p style="max-width:34ch;font-family:var(--sans),var(--sans-zh);font-size:max(15px,1.1vw);line-height:1.55;font-weight:400;color:var(--text-secondary)">项目总规模，测试保持通过。</p>
+      </div>
+      <div data-anim="towers" style="display:grid;grid-template-columns:repeat(4,1fr);gap:2vw;align-items:end;padding-bottom:2vh">
+        <div style="display:flex;flex-direction:column;align-items:flex-start;gap:1.2vh"><i data-lucide="code" style="color:var(--text-helper)"></i><span style="font-family:var(--sans);font-weight:200;font-size:min(4.6vw,8vh);line-height:.9;letter-spacing:-.04em;color:var(--text-primary)">3.2K</span><span style="font-size:max(14px,.95vw);font-weight:500;color:var(--text-secondary)">Python 源码 · 行</span><div style="width:100%;height:20vh;background:var(--accent);transform-origin:bottom"></div></div>
+        <div style="display:flex;flex-direction:column;align-items:flex-start;gap:1.2vh"><i data-lucide="monitor" style="color:var(--text-helper)"></i><span style="font-family:var(--sans);font-weight:200;font-size:min(4.6vw,8vh);line-height:.9;letter-spacing:-.04em;color:var(--text-primary)">5.8K</span><span style="font-size:max(14px,.95vw);font-weight:500;color:var(--text-secondary)">前端 TSX/CSS · 行</span><div style="width:100%;height:34vh;background:var(--accent);transform-origin:bottom"></div></div>
+        <div style="display:flex;flex-direction:column;align-items:flex-start;gap:1.2vh"><i data-lucide="check" style="color:var(--text-helper)"></i><span style="font-family:var(--sans);font-weight:200;font-size:min(4.6vw,8vh);line-height:.9;letter-spacing:-.04em;color:var(--text-primary)">64</span><span style="font-size:max(14px,.95vw);font-weight:500;color:var(--text-secondary)">后端测试 · 通过</span><div style="width:100%;height:12vh;background:var(--accent);transform-origin:bottom"></div></div>
+        <div style="display:flex;flex-direction:column;align-items:flex-start;gap:1.2vh"><i data-lucide="boxes" style="color:var(--text-helper)"></i><span style="font-family:var(--sans);font-weight:200;font-size:min(4.6vw,8vh);line-height:.9;letter-spacing:-.04em;color:var(--text-primary)">15</span><span style="font-size:max(14px,.95vw);font-weight:500;color:var(--text-secondary)">后端模块</span><div style="width:100%;height:16vh;background:var(--accent);transform-origin:bottom"></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 14 · P13 Three Forces · 三个不妥协 ===== -->
+<section class="slide light" data-layout="S13" data-animate="three-forces">
+  <div class="canvas-card">
+    <div class="chrome-min">
+      <div class="l">DECISIONS · 设计取舍</div>
+      <div class="r">14 / 16</div>
+    </div>
+    <div style="flex:1;padding:0;display:grid;grid-template-columns:5fr 11fr;gap:2vw;min-height:0">
+      <div data-anim="hero" style="background:var(--ink);color:#fff;padding:3vh 1.8vw;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden">
+        <span class="dot-mat" style="position:absolute;right:-5vw;bottom:-5vh;width:18vw;height:18vw;opacity:.45"></span>
+        <div class="t-cat" style="color:rgba(255,255,255,.7)">WHY IT WORKS</div>
+        <h3 style="font-family:var(--sans),var(--sans-zh);font-weight:200;font-size:min(3.6vw,6.4vh);line-height:1.05;color:#fff;position:relative;z-index:1">三个<br>不妥协</h3>
+      </div>
+      <div data-anim="cards" style="display:flex;flex-direction:column;gap:1.4vh;min-height:0">
+        <article style="background:var(--grey-1);padding:2.2vh 1.8vw;display:grid;grid-template-columns:auto 1fr;gap:1.8vw;align-items:start;flex:1">
+          <span style="font-family:var(--sans);font-weight:200;font-size:min(5vw,8vh);line-height:.8;color:var(--accent)">01</span>
+          <div><h4 style="font-weight:500;font-size:max(17px,1.5vw);color:var(--text-primary);margin-bottom:.7vh">权威与叙事分离</h4><p style="font-weight:400;font-size:max(15px,1vw);color:var(--text-secondary);line-height:1.55">数值先由规则算定，模型写的内容不许改状态。删掉全部叙事缓存，结局一个不变。</p></div>
+        </article>
+        <article style="background:var(--grey-1);padding:2.2vh 1.8vw;display:grid;grid-template-columns:auto 1fr;gap:1.8vw;align-items:start;flex:1">
+          <span style="font-family:var(--sans);font-weight:200;font-size:min(5vw,8vh);line-height:.8;color:var(--accent)">02</span>
+          <div><h4 style="font-weight:500;font-size:max(17px,1.5vw);color:var(--text-primary);margin-bottom:.7vh">单次调用廷议</h4><p style="font-weight:400;font-size:max(15px,1vw);color:var(--text-secondary);line-height:1.55">整场廷议一次生成。谁发难、谁打断、谁补台，后发言的人会先读前面几位大臣的意见。</p></div>
+        </article>
+        <article style="background:var(--grey-1);padding:2.2vh 1.8vw;display:grid;grid-template-columns:auto 1fr;gap:1.8vw;align-items:start;flex:1">
+          <span style="font-family:var(--sans);font-weight:200;font-size:min(5vw,8vh);line-height:.8;color:var(--accent)">03</span>
+          <div><h4 style="font-weight:500;font-size:max(17px,1.5vw);color:var(--text-primary);margin-bottom:.7vh">记忆会遗忘</h4><p style="font-weight:400;font-size:max(15px,1vw);color:var(--text-secondary);line-height:1.55">每条记忆按重要度定寿命。重要的永不遗忘，琐碎的几个回合后自动归档，不再参与召回。</p></div>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 15 · P18 Why Now · 这能说明什么 ===== -->
+<section class="slide dark" data-layout="S18" data-animate="why-now">
+  <div class="canvas-card">
+    <div class="chrome-min">
+      <div class="l">CAPABILITY · 这能说明什么</div>
+      <div class="r">15 / 16</div>
+    </div>
+    <div style="flex:1;padding:0;display:grid;grid-template-rows:auto 1fr;gap:5vh">
+      <div data-anim="head" style="display:flex;flex-direction:column;gap:1.4vh">
+        <div class="t-meta">WHAT IT PROVES</div>
+        <h2 style="font-family:var(--sans),var(--sans-zh);font-weight:200;font-size:min(5.8vw,10.2vh);line-height:.96;letter-spacing:-.035em;color:var(--text-primary)">这能说明什么</h2>
+      </div>
+      <div data-anim="cols" style="display:grid;grid-template-columns:repeat(3,1fr);gap:2vw;align-items:stretch">
+        <div style="display:flex;flex-direction:column;gap:1.4vh;border-top:1px solid var(--border-subtle);padding-top:2vh">
+          <span class="t-cat" style="color:var(--text-helper)">FULL STACK</span>
+          <h4 style="font-weight:500;font-size:max(18px,1.7vw);color:var(--text-primary)">一人贯通全栈</h4>
+          <p style="font-weight:400;font-size:max(15px,1.05vw);color:var(--text-secondary);line-height:1.55">前端 React、后端 FastAPI、AI 层 Agent，一个人从界面一直写到结算。</p>
+          <span style="font-family:var(--sans);font-weight:200;font-size:min(6.4vw,11vh);line-height:.85;letter-spacing:-.04em;color:var(--text-primary);margin-top:auto">1 人</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:1.4vh;border-top:1px solid var(--border-subtle);padding-top:2vh">
+          <span class="t-cat" style="color:var(--text-helper)">ORCHESTRATION</span>
+          <h4 style="font-weight:500;font-size:max(18px,1.7vw);color:var(--text-primary)">会编排 Agent</h4>
+          <p style="font-weight:400;font-size:max(15px,1.05vw);color:var(--text-secondary);line-height:1.55">七种 LLM 角色各司其职，再配上 tool-use，让模型自己去查盘面再回答。</p>
+          <span style="font-family:var(--sans);font-weight:200;font-size:min(6.4vw,11vh);line-height:.85;letter-spacing:-.04em;color:var(--text-primary);margin-top:auto">7 角色</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:1.4vh;border-top:2px solid var(--accent);padding-top:2vh">
+          <span class="t-cat" style="color:var(--accent)">DISCIPLINE</span>
+          <h4 style="font-weight:500;font-size:max(18px,1.7vw);color:var(--text-primary)">守得住工程纪律</h4>
+          <p style="font-weight:400;font-size:max(15px,1.05vw);color:var(--text-secondary);line-height:1.55">权威状态与叙事分离，测试兜底。就算模型崩了，这一回合也能照常结算。</p>
+          <span style="font-family:var(--sans);font-weight:200;font-size:min(6.4vw,11vh);line-height:.85;letter-spacing:-.04em;color:var(--accent);margin-top:auto">64 测试</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 16 · P9 Closing · 左 IKB 宣言 / 右 takeaway ===== -->
+<section class="slide split" data-layout="S09" data-animate="split-statement">
+  <div class="canvas-card">
+    <div class="split-half">
+      <div class="half b-accent" style="padding:5.6vh 3.6vw 4.4vh;justify-content:space-between;position:relative;overflow:hidden">
+        <canvas class="ascii-bg" aria-hidden="true"></canvas>
+        <div class="chrome-min" style="margin-bottom:0;position:relative;z-index:1">
+          <div class="l">16 / 16</div>
+          <div class="r">CLOSING</div>
+        </div>
+        <div data-anim="manifesto" style="display:flex;flex-direction:column;gap:2vh;position:relative;z-index:1">
+          <div class="t-meta" style="color:rgba(255,255,255,.78);letter-spacing:.22em;margin-bottom:1.6vh">MANIFESTO</div>
+          <h2 style="font-family:var(--sans),var(--sans-zh);font-size:min(6.4vw,11vh);line-height:1;letter-spacing:-.025em;font-weight:200;color:#fff">渔阳鼙鼓动地来。<br>潼关以东，<span style="font-style:italic;font-weight:300">尽为战场</span>。</h2>
+          <div style="font-family:var(--sans),var(--sans-zh);font-size:max(15px,1.1vw);line-height:1.6;color:rgba(255,255,255,.84);font-weight:400;max-width:34ch;margin-top:1.4vh">我把这台失序的国家机器，交给了一群 Agent，也交到你手上。</div>
+        </div>
+        <div data-anim="signature" style="display:flex;justify-content:space-between;align-items:end;border-top:1px solid rgba(255,255,255,.22);padding-top:2vh;position:relative;z-index:1">
+          <div class="t-meta" style="color:rgba(255,255,255,.62)">一人 · 一群 Agent</div>
+          <div class="t-meta" style="color:rgba(255,255,255,.62)">26.07</div>
+        </div>
+      </div>
+      <div class="half" style="padding:5.6vh 3.6vw 4.4vh;justify-content:space-between">
+        <div class="chrome-min">
+          <div class="l">TAKEAWAYS</div>
+          <div class="r">03 RULES</div>
+        </div>
+        <div data-anim="rules" style="display:flex;flex-direction:column;gap:0">
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:2vw;align-items:start;padding:2.6vh 0;border-top:1px solid var(--border-subtle)">
+            <div style="font-family:var(--sans);font-weight:200;font-size:min(4.4vw,7.8vh);line-height:.9;color:var(--text-primary)">01</div>
+            <div><h3 style="font-family:var(--sans),var(--sans-zh);font-weight:500;font-size:max(18px,1.8vw);line-height:1.2;letter-spacing:-.015em;color:var(--text-primary);margin-bottom:1vh">规则是权威</h3><p style="font-family:var(--sans),var(--sans-zh);font-size:max(16px,.94vw);line-height:1.6;color:var(--text-secondary);font-weight:400">模型负责说得像，规则负责算得准。</p></div>
+          </div>
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:2vw;align-items:start;padding:2.6vh 0;border-top:1px solid var(--border-subtle)">
+            <div style="font-family:var(--sans);font-weight:200;font-size:min(4.4vw,7.8vh);line-height:.9;color:var(--text-primary)">02</div>
+            <div><h3 style="font-family:var(--sans),var(--sans-zh);font-weight:500;font-size:max(18px,1.8vw);line-height:1.2;letter-spacing:-.015em;color:var(--text-primary);margin-bottom:1vh">表达交给模型</h3><p style="font-family:var(--sans),var(--sans-zh);font-size:max(16px,.94vw);line-height:1.6;color:var(--text-secondary);font-weight:400">人物、邸报、奏章与圣旨，让语言模型去写。</p></div>
+          </div>
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:2vw;align-items:start;padding:2.6vh 0;border-top:1px solid var(--border-subtle);border-bottom:2px solid var(--accent)">
+            <div style="font-family:var(--sans);font-weight:200;font-size:min(4.4vw,7.8vh);line-height:.9;color:var(--accent)">03</div>
+            <div><h3 style="font-family:var(--sans),var(--sans-zh);font-weight:500;font-size:max(18px,1.8vw);line-height:1.2;letter-spacing:-.015em;color:var(--accent);margin-bottom:1vh">一人也能成军</h3><p style="font-family:var(--sans),var(--sans-zh);font-size:max(16px,.94vw);line-height:1.6;color:var(--text-secondary);font-weight:400">Codex 验证，Claude Code 编码，多模型与 seedream 协作。</p></div>
+          </div>
+        </div>
+        <div data-anim="foot" class="t-meta" style="color:var(--text-helper);text-align:right">→ 完 · END OF FIELD NOTE</div>
+      </div>
+    </div>
+  </div>
+</section>

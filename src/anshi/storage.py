@@ -108,6 +108,19 @@ class GameStore:
                 detail TEXT NOT NULL,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
+            CREATE TABLE IF NOT EXISTS event_memories (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                character_id TEXT NOT NULL,
+                summary TEXT NOT NULL,
+                scene TEXT NOT NULL DEFAULT '',
+                turn INTEGER NOT NULL,
+                importance INTEGER NOT NULL DEFAULT 3,
+                tags TEXT NOT NULL DEFAULT '[]',
+                year INTEGER NOT NULL DEFAULT 756,
+                month INTEGER NOT NULL DEFAULT 6,
+                expires_at INTEGER,
+                archived INTEGER NOT NULL DEFAULT 0
+            );
             CREATE TABLE IF NOT EXISTS save_slots (
                 slot_id INTEGER PRIMARY KEY,
                 name TEXT NOT NULL,
@@ -261,6 +274,59 @@ class GameStore:
             self.conn.execute("DELETE FROM auxiliary_state")
             self.conn.execute("DELETE FROM agent_runs")
         return state
+
+    def save_memories(self, memories: list[dict]) -> None:
+        """Batch-insert extracted memories into event_memories table."""
+        with self.conn:
+            for mem in memories:
+                tags = json.dumps(mem.get("tags", []) or [], ensure_ascii=False)
+                self.conn.execute(
+                    "INSERT INTO event_memories(character_id,summary,scene,turn,importance,tags,year,month,expires_at) VALUES(?,?,?,?,?,?,?,?,?)",
+                    (
+                        str(mem.get("character_id", "")),
+                        str(mem.get("summary", ""))[:200],
+                        str(mem.get("scene", "回合记忆")),
+                        int(mem.get("turn", 0)),
+                        int(mem.get("importance", 3)),
+                        tags,
+                        int(mem.get("year", 756)),
+                        int(mem.get("month", 6)),
+                        int(mem["expires_at"]) if mem.get("expires_at") is not None else None,
+                    ),
+                )
+
+    def expire_memories(self, current_turn: int) -> int:
+        """Archive memories past their TTL. Returns count archived."""
+        with self.conn:
+            cursor = self.conn.execute(
+                "UPDATE event_memories SET archived=1 WHERE archived=0 AND expires_at IS NOT NULL AND expires_at <= ?",
+                (current_turn,),
+            )
+            return cursor.rowcount
+
+    def recall_memories(self, character_id: str = "", tags: list[str] | None = None, current_turn: int = 0, limit: int = 10) -> list[dict]:
+        """Recall memories for a character or by tags. Returns active (non-archived, non-expired)."""
+        params: list = []
+        where = ["archived=0", "(expires_at IS NULL OR expires_at > ?)"]
+        params.append(current_turn)
+        if character_id:
+            where.append("character_id = ?")
+            params.append(character_id)
+        if tags:
+            tag_conds = " OR ".join(["tags LIKE ?" for _ in tags])
+            where.append(f"({tag_conds})")
+            params.extend(f"%{t}%" for t in tags)
+        sql = f"SELECT id,character_id,summary,scene,turn,importance,tags,year,month FROM event_memories WHERE {' AND '.join(where)} ORDER BY importance DESC, turn DESC LIMIT ?"
+        params.append(limit)
+        rows = self.conn.execute(sql, params).fetchall()
+        result = []
+        for row in rows:
+            try:
+                tag_list = json.loads(row[6])
+            except (json.JSONDecodeError, TypeError):
+                tag_list = []
+            result.append({"id": row[0], "character_id": row[1], "summary": row[2], "scene": row[3], "turn": row[4], "importance": row[5], "tags": tag_list, "year": row[7], "month": row[8]})
+        return result
 
     def revision(self) -> int:
         row = self.conn.execute("SELECT revision FROM campaign WHERE id=1").fetchone()

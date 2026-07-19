@@ -94,11 +94,13 @@ export function DirectiveDock({
 export function AudienceDrawer({
   character,
   office,
+  conversation,
   onClose,
   onSecret,
 }: {
   character: any;
   office?: string;
+  conversation?: any;
   onClose: () => void;
   onSecret: (data: any) => Promise<any>;
 }) {
@@ -115,6 +117,8 @@ export function AudienceDrawer({
   const labels: Record<string, string> = {
     military: "统兵", administration: "治政", politics: "权术", diplomacy: "交涉", loyalty: "忠诚", integrity: "操守",
   };
+  const rel = conversation?.relationships?.[character.id];
+  const chatHistory: any[] = conversation?.chats?.[character.id] || [];
   return (
     <div className={`audience-stage scene-${scene}`} role="dialog" aria-modal="true">
       <button className="drawer-scrim" onClick={onClose} aria-label="关闭" />
@@ -127,6 +131,18 @@ export function AudienceDrawer({
           <h2>{character.name}</h2>
           <small>{office || character.identity}</small>
           <p>{character.public_stance}</p>
+          {rel && (
+            <div className="relationship-mini">
+              <div className="rel-row"><span>信任</span><b className={rel.trust < 35 ? "low" : rel.trust > 65 ? "high" : ""}>{rel.trust}</b></div>
+              <div className="rel-row"><span>恩宠</span><b className={rel.favor < -10 ? "low" : rel.favor > 30 ? "high" : ""}>{rel.favor >= 0 ? "+" : ""}{rel.favor}</b></div>
+              <div className="rel-row"><span>畏惧</span><b className={rel.fear > 60 ? "low" : ""}>{rel.fear}</b></div>
+              {rel.promises?.length > 0 && (
+                <div className="promises-tag" title={rel.promises.join("；")}>
+                  诺言 {rel.promises.length}
+                </div>
+              )}
+            </div>
+          )}
         </aside>
         <main className="audience-conversation">
           <header>
@@ -147,6 +163,17 @@ export function AudienceDrawer({
                   <small>{reply.model_used ? "联网人物推演" : "规则与中文模板"}</small>
                 </p>
               </div>
+            )}
+            {chatHistory.length > 0 && (
+              <details className="chat-recall">
+                <summary>此前奏对 ({chatHistory.length / 2} 轮)</summary>
+                {chatHistory.map((m: any, i: number) => (
+                  <div key={i} className={m.role === "皇帝" ? "recall-emperor" : "recall-minister"}>
+                    <small>T{m.turn} · {m.scene}</small>
+                    <span>{m.text.length > 80 ? m.text.slice(0, 80) + "…" : m.text}</span>
+                  </div>
+                ))}
+              </details>
             )}
           </div>
           <div className="audience-input">

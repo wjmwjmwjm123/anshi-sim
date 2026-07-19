@@ -10,8 +10,9 @@ from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from anshi.ai import generate_event_effects, generate_turn_narration, generate_world_proposal, load_config
+from anshi.ai import generate_event_effects, generate_turn_narration, generate_world_proposal, load_config, extract_turn_memories
 from anshi.tools import build_game_tools
+from anshi.conversation import expire_memories, remember
 from anshi.campaign import ACT_NAMES, advance as advance_campaign, CampaignEvent, CampaignProgress
 from anshi.conversation import ConversationState, promulgate_decrees
 from anshi.core import Order, apply_order
@@ -39,6 +40,71 @@ class SaveSlotRequest(BaseModel):
 
 class PolicySelectRequest(BaseModel):
     policy_id: str
+
+
+_HAS_TURN_EXTRACTION_ERROR = False
+
+
+def _extract_and_persist_memories(game, narration: str, gazette: str) -> None:
+    """回合结算后自动提取关键记忆，存入 ConversationState + SQLite。"""
+    global _HAS_TURN_EXTRACTION_ERROR
+    try:
+        characters = {
+            cid: ch for cid, ch in game.management.characters.items()
+            if ch.status == "active"
+        } if hasattr(game.management, "characters") else {}
+        if not characters:
+            return
+        config = load_config(role="utility")
+        if config is None:
+            return
+        extracted = extract_turn_memories(
+            narration, gazette, characters,
+            current_turn=game.progress.total_turn,
+            year=game.progress.year, month=game.progress.month,
+            config=config,
+        )
+        for m in extracted:
+            cid = str(m.get("character_id", ""))
+            if not cid:
+                continue
+            imp = min(5, max(1, int(m.get("importance", 3))))
+            tags = list(m.get("tags", []) or [])[:6]
+            remember(
+                game.conversation, cid,
+                str(m.get("summary", ""))[:120],
+                str(m.get("scene", "回合记忆")),
+                game.progress.total_turn,
+                importance=imp, tags=tags,
+                year=game.progress.year, month=game.progress.month,
+            )
+        db_memories = []
+        for m in extracted:
+            cid = str(m.get("character_id", ""))
+            if not cid:
+                continue
+            imp = min(5, max(1, int(m.get("importance", 3))))
+            ttl_val = {1: 3, 2: 6, 3: 12, 4: 24, 5: None}.get(imp, 12)
+            db_memories.append({
+                "character_id": cid,
+                "summary": str(m.get("summary", ""))[:200],
+                "scene": str(m.get("scene", "回合记忆")),
+                "turn": game.progress.total_turn,
+                "importance": imp,
+                "tags": list(m.get("tags", []) or [])[:6],
+                "year": game.progress.year,
+                "month": game.progress.month,
+                "expires_at": game.progress.total_turn + ttl_val if ttl_val is not None else None,
+            })
+        if db_memories:
+            game.store.save_memories(db_memories)
+        expire_memories(game.conversation, game.progress.total_turn)
+        game.store.expire_memories(game.progress.total_turn)
+    except Exception:
+        if not _HAS_TURN_EXTRACTION_ERROR:
+            _HAS_TURN_EXTRACTION_ERROR = True
+            import traceback
+            traceback.print_exc()
 
 
 def _decree_targets(management) -> dict[str, dict[str, str]]:
@@ -308,8 +374,11 @@ def register(router_: APIRouter, game) -> None:
                 gazette = f"【邸报】{game.progress.year}年{game.progress.month}月，{ACT_NAMES[game.progress.act]}。{narration}"
             result["gazette"] = gazette
 
-            game.store.record_turn("resolve", result)
+            # --- 记忆提取（回合结束后自动提炼关键记忆）---
             game.store.save_management(game.management)
+            _extract_and_persist_memories(game, narration, gazette)
+
+            game.store.record_turn("resolve", result)
             game.store.save_progress(game.progress)
             game.store.save_conversation(game.conversation)
             game.store.save_strategy(game.strategy)
@@ -376,8 +445,9 @@ def register(router_: APIRouter, game) -> None:
             gazette = simulation.pop("_gazette", "") or ""
 
             # 保存快照（在流式输出之前）
-            game.store.record_turn("resolve", result)
             game.store.save_management(game.management)
+            _extract_and_persist_memories(game, narration, gazette)
+            game.store.record_turn("resolve", result)
             game.store.save_progress(game.progress)
             game.store.save_conversation(game.conversation)
             game.store.save_strategy(game.strategy)

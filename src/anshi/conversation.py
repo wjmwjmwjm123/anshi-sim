@@ -18,6 +18,14 @@ class Memory:
     scene: str
     turn: int
     importance: int = 3
+    tags: list[str] = field(default_factory=list)
+    expires_at: int | None = None  # None = permanent (importance 5)
+    created_year: int = 756
+    created_month: int = 6
+
+    @staticmethod
+    def ttl_for(importance: int) -> int | None:
+        return {1: 3, 2: 6, 3: 12, 4: 24, 5: None}.get(importance, 12)
 
 
 @dataclass
@@ -61,10 +69,60 @@ def record_exchange(state: ConversationState, character_id: str, topic: str, rep
         remember(state, character_id, f"第{turn}回合，{scene}中围绕“{topic[:40]}”形成持续影响。", scene, turn)
 
 
-def remember(state: ConversationState, character_id: str, summary: str, scene: str, turn: int, importance: int = 3) -> None:
+def remember(state: ConversationState, character_id: str, summary: str, scene: str, turn: int, importance: int = 3, tags: list[str] | None = None, year: int = 756, month: int = 6) -> None:
     items = state.memories.setdefault(character_id, [])
-    items.append(Memory(summary, scene, turn, importance))
-    state.memories[character_id] = sorted(items, key=lambda item: (item.importance, item.turn))[-20:]
+    ttl = Memory.ttl_for(importance)
+    expires_at = turn + ttl if ttl is not None else None
+    items.append(Memory(summary, scene, turn, importance, tags or [], expires_at, year, month))
+    # cap at 30, sort by importance then recency
+    items.sort(key=lambda item: (item.importance, item.turn), reverse=True)
+    if len(items) > 30:
+        # trim oldest lowest-importance first
+        items.sort(key=lambda item: (item.importance, item.turn))
+        items[:] = items[len(items) - 30:]
+        items.sort(key=lambda item: (item.importance, item.turn), reverse=True)
+
+
+def expire_memories(state: ConversationState, current_turn: int) -> int:
+    """Remove memories past their TTL. Returns count removed."""
+    removed = 0
+    for char_id in state.memories:
+        before = len(state.memories[char_id])
+        state.memories[char_id] = [
+            m for m in state.memories[char_id]
+            if m.expires_at is None or m.expires_at > current_turn
+        ]
+        removed += before - len(state.memories[char_id])
+    return removed
+
+
+def recall_by_tags(state: ConversationState, tags: list[str], exclude_character: str | None = None, current_turn: int = 0, limit: int = 10) -> list[Memory]:
+    """Cross-character recall by tags. Used for context injection during conversations."""
+    results: list[Memory] = []
+    tags_lower = [t.lower() for t in tags]
+    for char_id, memories in state.memories.items():
+        if exclude_character and char_id == exclude_character:
+            continue
+        for m in memories:
+            if m.expires_at is not None and m.expires_at <= current_turn:
+                continue
+            if any(t in [tag.lower() for tag in m.tags] for t in tags_lower):
+                results.append(m)
+    results.sort(key=lambda m: (m.importance, m.turn), reverse=True)
+    return results[:limit]
+
+
+def recall_by_time(state: ConversationState, start_turn: int, end_turn: int | None = None, character_id: str | None = None, limit: int = 20) -> list[Memory]:
+    """Recall memories within a turn range. For 'what happened last month' queries."""
+    end = end_turn or start_turn
+    results: list[Memory] = []
+    chars = [character_id] if character_id else state.memories.keys()
+    for cid in chars:
+        for m in state.memories.get(cid, []):
+            if start_turn <= m.turn <= end:
+                results.append(m)
+    results.sort(key=lambda m: m.turn, reverse=True)
+    return results[:limit]
 
 
 def draft_freeform(state: ConversationState, text: str, turn: int, candidates: list[dict] | None = None) -> dict:

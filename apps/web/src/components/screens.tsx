@@ -302,7 +302,7 @@ export function RegionsView({ snap }: { snap: Snapshot }) {
     <div className="split-view">
       <section>
         <SectionHead eyebrow="山河地理" title="十六地区" />
-        <WorldMap data={snap.catalog} management={snap.management} selected={selected} onSelect={setSelected} />
+        <WorldMap data={snap.catalog} management={snap.management} strategy={snap.strategy} selected={selected} onSelect={setSelected} />
       </section>
       <aside className="detail-sheet">
         <SectionHead eyebrow="地区档案" title={region?.name || "选择地区"} extra={region && <Evidence value={region.evidence_status} />} />
@@ -641,43 +641,91 @@ export function PolicyFocusViewRich({ snap, onSelect }: { snap: Snapshot; onSele
   );
 }
 
+function highlightKeywords(text: string): string {
+  return text.replace(
+    /(升|降|加|减|增|削|调|拨|遣|募|裁|赈|征|修|筑|改|复|夺|授|罢|封|迁|徙|发)([^，。！？\n]{0,20}(?:[\d一二三四五六七八九十百千万]+[万两石骑人户亩]?)?)/g,
+    (_, verb, rest) => `<mark class="kw-${verb.charCodeAt(0)}">${verb}${rest}</mark>`,
+  );
+}
+
+function renderReportBody(text: string) {
+  const parts = text.split(/(&lt;&lt;&lt;SECTION:(.+?)&gt;&gt;&gt;)/g);
+  if (parts.length <= 1) {
+    // Fallback: split by Chinese section headers
+    return text.split("\n").map((line, i) => {
+      if (!line.trim()) return <br key={i} />;
+      const hMatch = line.match(/^[一二三四五六七八九十]+[、．.]\s*(.+)/);
+      if (hMatch) return <h4 key={i}>{highlightKeywords(line)}</h4>;
+      if (/^【.+】$/.test(line.trim())) return <h4 key={i} className="report-subhead">{highlightKeywords(line)}</h4>;
+      return <p key={i} dangerouslySetInnerHTML={{ __html: highlightKeywords(line) }} />;
+    });
+  }
+  // Structured sections
+  const elements: React.ReactNode[] = [];
+  for (let i = 0; i < parts.length; i++) {
+    if (parts[i].startsWith("<<<SECTION:")) {
+      elements.push(<h4 key={`h-${i}`} className="report-section-header">{parts[i + 1]}</h4>);
+      i++;
+    } else if (parts[i].trim()) {
+      parts[i].split("\n").forEach((line, j) => {
+        if (!line.trim()) elements.push(<br key={`${i}-${j}`} />);
+        else elements.push(<p key={`${i}-${j}`} dangerouslySetInnerHTML={{ __html: highlightKeywords(line) }} />);
+      });
+    }
+  }
+  return elements;
+}
+
 export function HistoryView({ state, resolution }: { state: any; resolution: any }) {
-  const isReportStreaming = resolution && resolution.report !== undefined && resolution.reportTitle && !resolution.report_end;
+  const isReportStreaming = resolution && resolution.report !== undefined && !resolution.report_end;
   return (
-    <section>
+    <section className="history-view">
       <SectionHead eyebrow="起居注与露布" title="本局史册" extra={<BookOpen size={18} />} />
+
       {resolution && (
         <div className="resolution-report">
-          <h3>第 {resolution.turn} 回合结算</h3>
+          <div className="report-scroll-header">
+            <span className="scroll-seal">唐</span>
+            <div>
+              <small>第 {resolution.turn} 回合</small>
+              <h3>{resolution.reportTitle || "月末奏章"}</h3>
+              {resolution.campaign && <span className="scroll-subtitle">{resolution.campaign.title || resolution.campaign.ending || ""}</span>}
+            </div>
+          </div>
+
           {resolution.report ? (
-            <div className="report-card">
-              <b>{resolution.reportTitle || "月末奏章"}</b>
-              <div className="report-body">
-                {resolution.report.split("\n").map((line: string, i: number) => {
-                  if (!line.trim()) return <br key={i} />;
-                  if (/^[一二三四五六七八九十]+、/.test(line)) return <h4 key={i}>{line}</h4>;
-                  return <p key={i}>{line}</p>;
-                })}
-                {isReportStreaming && <span className="typing-cursor">▌</span>}
-              </div>
+            <div className={`report-card ${isReportStreaming ? "streaming" : ""}`}>
+              <div className="report-body">{renderReportBody(resolution.report)}</div>
+              {isReportStreaming && <span className="typing-cursor">▌</span>}
             </div>
           ) : resolution.gazette ? (
             <div className="gazette-card">
               <b>邸报</b>
-              <p>{resolution.gazette}</p>
+              <div className="report-body">{renderReportBody(resolution.gazette)}</div>
             </div>
           ) : resolution.narration ? (
-            <p>{resolution.narration}</p>
-          ) : null}
-          {resolution.reports.map((report: any) => (
-            <div key={report.directive_id} className={report.accepted ? "accepted" : "rejected"}>
-              <b>{report.headline}</b>
-              <span>{report.effects?.join("；") || report.reason}</span>
+            <div className="gazette-card">
+              <b>史官纪事</b>
+              <p>{resolution.narration}</p>
             </div>
-          ))}
+          ) : null}
+
+          {resolution.reports && resolution.reports.length > 0 && (
+            <div className="directive-outcomes">
+              <b>诏令执行</b>
+              {resolution.reports.map((report: any) => (
+                <div key={report.directive_id} className={report.accepted ? "accepted" : "rejected"}>
+                  <b>{report.accepted ? "✓" : "✗"} {report.headline}</b>
+                  <span>{report.effects?.join("；") || report.reason}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
+
       <div className="chronicle">
+        <b>史册编年</b>
         {state.history.map((item: string, index: number) => (
           <article key={`${item}-${index}`}>
             <span>{String(state.history.length - index).padStart(3, "0")}</span>

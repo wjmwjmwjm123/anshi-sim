@@ -247,6 +247,7 @@ export default function App() {
         <AudienceDrawer
           character={audience}
           office={snap.management.characters[audience.id]?.office}
+          conversation={snap.conversation}
           onClose={() => setAudience(null)}
           onSecret={secret}
         />

@@ -9,9 +9,10 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable, Generator, Mapping
 
+from anshi.agent_runtime import AgentSession, ToolRegistry, run_agent_loop, run_session_loop, run_agent_stream_with_session
 from anshi.ai import LLMConfig, chat_completion, for_role, load_config, sanitize_json, stream_chat_completion
 from anshi.prompts import (
     CHARACTER_SYSTEM,
@@ -52,13 +53,15 @@ def _sampling_for(role: str, temperature: float | None = None, top_p: float | No
 
 @dataclass
 class CouncilAgent:
-    """廷议 agent 配置（纯 Python dataclass，无第三方依赖）。"""
+    """廷议 agent 配置。"""
     name: str
     role: str  # "minister" | "secretary" | "character" | "narrator" | "simulator" | "court_script" | "gazette"
     system_prompt: str
     config: LLMConfig
     temperature: float = 0.7
     top_p: float | None = None
+    session: AgentSession | None = field(default=None, repr=False)
+    tools: ToolRegistry | None = field(default=None, repr=False)
 
 
 # --- 工厂函数 ---
@@ -181,6 +184,58 @@ def create_gazette_agent(config: LLMConfig | None = None) -> CouncilAgent:
 
 
 # --- 执行函数 ---
+
+
+def run_agent_with_tool_loop(
+    agent: CouncilAgent,
+    user_prompt: str,
+    *,
+    fallback: str = "",
+    with_status: bool = False,
+    tag: str = "",
+    max_tool_rounds: int = 5,
+) -> str | tuple[str, bool]:
+    """执行 agent，支持 tool-use 循环（使用新的 agent_loop）。"""
+    if not agent.config.api_key:
+        return (fallback, False) if with_status else fallback
+    session = agent.session or AgentSession()
+    session.add_user(user_prompt)
+    try:
+        text = run_session_loop(
+            session, agent.system_prompt, agent.config,
+            tools=agent.tools,
+            temperature=agent.temperature,
+            max_rounds=max_tool_rounds,
+            tag=tag or agent.name,
+        )
+        if agent.session is None:
+            agent.session = session
+        return (text, True) if with_status else text
+    except (OSError, TimeoutError, KeyError, IndexError, TypeError, ValueError, RuntimeError, json.JSONDecodeError):
+        return (fallback, False) if with_status else fallback
+
+
+def run_session_stream(
+    agent: CouncilAgent,
+    user_prompt: str,
+    *,
+    tag: str = "",
+) -> Generator[str, None, None]:
+    """流式执行，带 session 历史累积。"""
+    if not agent.config.api_key:
+        return
+    session = agent.session or AgentSession()
+    session.add_user(user_prompt)
+    try:
+        for chunk in run_agent_stream_with_session(
+            session, agent.system_prompt, agent.config,
+            temperature=agent.temperature, tag=tag or agent.name,
+        ):
+            yield chunk
+        if agent.session is None:
+            agent.session = session
+    except (OSError, TimeoutError, KeyError, IndexError, TypeError, ValueError, RuntimeError, json.JSONDecodeError):
+        return
 
 
 def _messages(agent: CouncilAgent, user_prompt: str) -> list[dict[str, str]]:

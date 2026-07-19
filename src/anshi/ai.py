@@ -475,7 +475,11 @@ def generate_world_proposal(
                 "第二段：以 <<<邸报>>> 开头，写一篇邸报（200-350字）。文风仿《资治通鉴》叙事笔法，"
                 "以小说般的叙事开篇（场景、气氛、人物动作），用文言与白话相间的笔法，"
                 "涵盖诏令施行、军事动向、财政变化、民心态势，以因果叙事串联，结尾留一句余韵暗示天下走向。"
-                "不要修改任何数值，不要出现英文。"
+                "不要修改任何数值，不要出现英文。\n\n"
+                "# HITL 纠偏决策（可选，最多 3 块）\n"
+                "若本回合有承办人在推进局势时遇到难以单靠自身权限解决的阻力，可在邸报末尾追加决策块：\n"
+                '格式：<<DECISION>>\n{"title":"≤12字纠偏名","context":"已试办法、具体卡点、为何须皇帝改令","options":[{"label":"旨意一","hint":"方向性后果"},{"label":"旨意二","hint":"方向性后果"}]}\n<<END>>\n'
+                "不要为凑数硬造决策块；只有真实阻力才产出。"
                 + tool_instruction
             ),
         },
@@ -534,6 +538,57 @@ def _turn_fallback(data: object) -> str:
     headline = data.get("headline", "本回合结算完毕")
     narrative = data.get("narrative", "结果已依既定规则写入实录。")
     return f"{headline}。{narrative}"
+
+
+def extract_turn_memories(
+    narration: str,
+    gazette: str,
+    characters: dict,
+    current_turn: int,
+    year: int = 756,
+    month: int = 6,
+    config: LLMConfig | None = None,
+) -> list[dict[str, object]]:
+    """Extract key memories from this turn for LLM agent recall in future turns."""
+    cfg = config or load_config(role="utility")
+    if cfg is None:
+        return []
+    char_list = "\n".join(
+        f"- {cid}: {ch.name}（{ch.office}）"
+        for cid, ch in characters.items() if ch.status == "active"
+    )
+    if not char_list:
+        return []
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "你是历史策略游戏的记忆提取器。从本回合纪事中提取关键记忆供未来回合人物召回。\n"
+                "输出 JSON：{memories:[{character_id:string,summary:string,importance:int,tags:[string]}]}。\n"
+                "summary：此人本回合关键经历的简短摘要（15-40 字）。\n"
+                "importance：1=琐事 2=日常 3=重要决策 4=转折事件 5=生死攸关。\n"
+                "tags：2-4 个标签，如 [潼关, 军粮, 会战]。\n"
+                "只输出本回合涉及的人物（通常 1-5 人），每人最多 2 条。不要虚构盘面没有的事件。"
+            ),
+        },
+        {
+            "role": "user",
+            "content": (
+                f"第 {current_turn} 回合 · {year} 年 {month} 月\n\n"
+                f"本回合邸报纪事：\n{narration[:2000] or gazette[:2000]}\n\n"
+                f"在册人物（仅输出涉及者）：\n{char_list}"
+            ),
+        },
+    ]
+    try:
+        text = chat_completion(messages, cfg, temperature=0.25)
+        parsed = sanitize_json(text)
+        if isinstance(parsed, dict):
+            result = parsed.get("memories", [])
+            return result if isinstance(result, list) else []
+    except (OSError, TimeoutError, KeyError, IndexError, TypeError, ValueError, RuntimeError, json.JSONDecodeError):
+        pass
+    return []
 
 
 def sanitize_json(raw: str) -> dict | list | None:

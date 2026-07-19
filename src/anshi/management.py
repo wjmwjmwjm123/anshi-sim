@@ -50,8 +50,12 @@ class IssueState:
     title: str
     tension: int
     progress: int = 0
-    status: Literal["active", "resolved"] = "active"
+    status: Literal["active", "resolved", "failed"] = "active"
     assignee: str = ""
+    # 承办人推进系统
+    expected_months: int = 12
+    inertia: int = 0          # 每月自然漂移（正=恶化，负=改善）
+    log: list[str] = field(default_factory=list)  # 最近推进日志
 
 
 @dataclass
@@ -191,20 +195,40 @@ def _world_tick(state: ManagementState, act: int) -> list[str]:
             region.support -= 1
             events.append(f"{region.name}动乱高企，民心继续下滑")
     for issue in state.issues.values():
-        if issue.status == "resolved":
+        if issue.status != "active":
             continue
         if issue.assignee and issue.assignee in state.characters:
             official = state.characters[issue.assignee]
-            gain = max(1, official.ability // 25)
+            rate = assignee_progress_rate(official)
+            gain = max(0, round(3 * rate / 100))
             issue.progress += gain
             issue.tension -= max(1, gain // 2)
-            events.append(f"{official.name}承办“{issue.title}”，进度增加{gain}")
+            issue.log.append(f"T{state.turn}: {official.name}推进 +{gain} (修正{rate:.0f}%)")
+            if len(issue.log) > 20:
+                issue.log = issue.log[-20:]
+            if gain > 0:
+                events.append(f"{official.name}承办“{issue.title}”，进度+{gain}（能力修正{rate:.0f}%）")
         else:
             issue.tension += min(3, max(1, act))
-        if issue.progress >= 100 or issue.tension <= 0:
+        issue.tension += max(0, issue.inertia)
+        issue.inertia = max(0, issue.inertia - 1)
+        if issue.progress >= 100:
             issue.status = "resolved"
             events.append(f"“{issue.title}”已经办结")
+        elif issue.tension >= 95:
+            issue.status = "failed"
+            events.append(f"“{issue.title}”积重难返，已恶化")
     return events
+
+
+def assignee_progress_rate(character: CharacterState) -> float:
+    """承办人月度推进修正率，范围 1~80%。"""
+    raw = (
+        (character.ability - 50) * 1.6
+        + (character.loyalty - 50) * 0.6
+        + 5.0  # baseline
+    )
+    return max(1.0, min(80.0, raw))
 
 
 def _apply(state: ManagementState, directive: QueuedDirective) -> DirectiveReport:

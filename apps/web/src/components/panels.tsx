@@ -421,8 +421,8 @@ export function DecreeReview({
             <span>《{decree.decision.title}》：{decree.decision.choice}</span>
           </div>
         )}
-        <p className=”compact-note”>圣旨已润色为唐廷格式。颁诏后，推演模型将根据诏书内容自行判断天下反应，无需逐条拆解指令。</p>
-        <button className=”ask-btn” onClick={() => onConfirm(decree.id)}>颁行圣旨</button>
+        <p className="compact-note">圣旨已润色为唐廷格式。颁诏后，推演模型将根据诏书内容自行判断天下反应，无需逐条拆解指令。</p>
+        <button className="ask-btn" onClick={() => onConfirm(decree.id)}>颁行圣旨</button>
       </aside>
     </div>
   );

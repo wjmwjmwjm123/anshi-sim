@@ -11,15 +11,30 @@ from typing import Any
 SITUATION_IDS = {"tongguan_command", "guanzhong_supply", "hebei_resistance"}
 
 POLICIES: list[dict[str, Any]] = [
-    {"id": "reinforce_tongguan", "branch": "军政", "title": "加强潼关防务", "days": 1, "requires": [], "cost": "现银 -60；潼关及相邻军队城防与士气提高", "effects": {"fortification": 8, "morale": 3}},
-    {"id": "unify_command", "branch": "军政", "title": "整饬军令体系", "days": 1, "requires": [], "cost": "军令冲突下降；潼关军令局势推进", "effects": {"command": 10}},
-    {"id": "shuofang_recruit", "branch": "军政", "title": "朔方整军募骑", "days": 1, "requires": ["reinforce_tongguan"], "cost": "现银 -80；朔方军补充可战兵", "effects": {"mobilize": 12}},
-    {"id": "contact_resistance", "branch": "河朔", "title": "联络河北义军", "days": 1, "requires": [], "cost": "现银 -40；河朔人心推进，民心略升", "effects": {"resistance": 12}},
-    {"id": "divide_yan", "branch": "河朔", "title": "离间燕廷诸将", "days": 1, "requires": ["contact_resistance"], "cost": "河朔压力下降；叛军内部猜忌增加", "effects": {"resistance": 16}},
-    {"id": "secure_grain_route", "branch": "财赋", "title": "保全江淮漕运", "days": 1, "requires": [], "cost": "现银 -70；月入粮秣增加，关中粮道推进", "effects": {"grain": 14}},
-    {"id": "relieve_guanzhong", "branch": "财赋", "title": "关中军民赈济", "days": 1, "requires": ["secure_grain_route"], "cost": "粮储 -80；民心上升，粮道推进", "effects": {"grain": 10}},
-    {"id": "repair_post_roads", "branch": "中枢", "title": "重建驿传", "days": 1, "requires": [], "cost": "现银 -50；情报与诏令传递更稳定", "effects": {"command": 6, "resistance": 4}},
-    {"id": "restrain_eunuchs", "branch": "中枢", "title": "裁抑近习干政", "days": 1, "requires": ["unify_command"], "cost": "皇威短期承压；朝堂冲突下降", "effects": {"command": 8}},
+    # ── 中枢整饬 ──
+    {"id": "unify_command", "branch": "中枢整饬", "title": "整饬军令体系", "requires": [], "effects": {"command": 10, "prestige": 3}},
+    {"id": "repair_post_roads", "branch": "中枢整饬", "title": "重建驿传", "requires": [], "effects": {"command": 6, "intel": 5}},
+    {"id": "restrain_eunuchs", "branch": "中枢整饬", "title": "裁抑近习干政", "requires": ["unify_command"], "effects": {"command": 8, "prestige": 5}},
+    {"id": "rebuild_censorate", "branch": "中枢整饬", "title": "重整御史台", "requires": ["restrain_eunuchs"], "effects": {"prestige": 8, "command": 4}},
+    {"id": "court_reform", "branch": "中枢整饬", "title": "三省合议改制", "requires": ["rebuild_censorate"], "effects": {"prestige": 10, "income": 5}},
+    # ── 军镇经略 ──
+    {"id": "reinforce_tongguan", "branch": "军镇经略", "title": "加强潼关防务", "requires": [], "effects": {"fortification": 8, "morale": 3}},
+    {"id": "shuofang_recruit", "branch": "军镇经略", "title": "朔方整军募骑", "requires": ["reinforce_tongguan"], "effects": {"mobilize": 12}},
+    {"id": "hexi_defense", "branch": "军镇经略", "title": "河西走廊防务", "requires": ["shuofang_recruit"], "effects": {"western": -12, "prestige": 3}},
+    {"id": "naval_jianghuai", "branch": "军镇经略", "title": "江淮水师操练", "requires": [], "effects": {"grain_safety": 15, "income": 4}},
+    {"id": "imperial_guard", "branch": "军镇经略", "title": "重建禁军六军", "requires": ["shuofang_recruit", "naval_jianghuai"], "effects": {"prestige": 12, "morale": 5}},
+    # ── 河朔联络 ──
+    {"id": "contact_resistance", "branch": "河朔联络", "title": "联络河北义军", "requires": [], "effects": {"resistance": 12, "support": 3}},
+    {"id": "divide_yan", "branch": "河朔联络", "title": "离间燕廷诸将", "requires": ["contact_resistance"], "effects": {"resistance": 16}},
+    {"id": "recruit_hebei", "branch": "河朔联络", "title": "河北招抚流亡", "requires": ["contact_resistance"], "effects": {"support": 8, "recruit": 3000}},
+    {"id": "heshuo_negotiate", "branch": "河朔联络", "title": "藩镇羁縻之策", "requires": ["divide_yan"], "effects": {"autonomy": 15, "income": 8}},
+    {"id": "rebellion_pardon", "branch": "河朔联络", "title": "颁诏赦降纳顺", "requires": ["heshuo_negotiate"], "effects": {"resistance": 20, "support": 5}},
+    # ── 财赋民生 ──
+    {"id": "secure_grain_route", "branch": "财赋民生", "title": "保全江淮漕运", "requires": [], "effects": {"grain": 14}},
+    {"id": "relieve_guanzhong", "branch": "财赋民生", "title": "关中军民赈济", "requires": ["secure_grain_route"], "effects": {"grain": 10, "support": 5}},
+    {"id": "land_survey", "branch": "财赋民生", "title": "清丈关陇田亩", "requires": ["relieve_guanzhong"], "effects": {"income": 12, "gentry_resistance": 10}},
+    {"id": "salt_tax_reform", "branch": "财赋民生", "title": "盐铁专卖整顿", "requires": [], "effects": {"income": 18}},
+    {"id": "trade_silk_road", "branch": "财赋民生", "title": "重开丝路商道", "requires": ["hexi_defense", "salt_tax_reform"], "effects": {"income": 25}},
 ]
 
 
@@ -54,23 +69,32 @@ def resolve_policy(progress: Any, state: Any, management: Any) -> list[str]:
         return []
     effects = item["effects"]
     events: list[str] = []
+    pid = item["id"]
+
+    # ── 中枢效果 ──
     if effects.get("command"):
-        state.central_prestige = min(100, state.central_prestige + (2 if item["id"] == "restrain_eunuchs" else 1))
+        state.central_prestige = min(100, state.central_prestige + 1 + effects["command"] // 10)
         issue = management.issues.get("court_conflict") or management.issues.get("succession_dual_court")
         if issue:
             issue.tension = max(0, issue.tension - effects["command"] // 2)
-        _advance(progress, "tongguan_command", effects["command"], f"国策《{item['title']}》整肃军令")
+        _advance(progress, "tongguan_command", effects["command"], f"国策[{item['title']}]整肃军令体系")
+    if effects.get("prestige"):
+        state.central_prestige = min(100, state.central_prestige + effects["prestige"])
+    if effects.get("intel"):
+        state.intel_confidence = min(100, state.intel_confidence + effects["intel"])
+
+    # ── 军镇效果 ──
     if effects.get("fortification"):
         region = management.regions.get("tongguan") or next(iter(management.regions.values()), None)
         if region:
             region.fortification += effects["fortification"]
         if management.finance.cash >= 60:
             management.finance.cash -= 60
-        events.append("国策生效：潼关防务得到加强")
+        events.append("国策生效：潼关城防加固")
     if effects.get("morale"):
         for army in management.armies.values():
-            if "潼关" in army.name or army.region == "tongguan":
-                army.morale += effects["morale"]
+            army.morale += effects["morale"]
+        state.military_power = min(100, state.military_power + 3)
     if effects.get("mobilize"):
         army = management.armies.get("tang_shuofang") or management.armies.get("shuofang")
         if army:
@@ -78,31 +102,59 @@ def resolve_policy(progress: Any, state: Any, management: Any) -> list[str]:
             army.strength += raised
             army.fit_strength += raised
         management.finance.cash = max(0, management.finance.cash - 80)
+        state.military_power = min(100, state.military_power + 4)
         events.append("国策生效：朔方募骑完成")
+    if effects.get("western"):
+        progress.obligations["西陲空虚"] = max(0, progress.obligations.get("西陲空虚", 30) + effects["western"])
+        events.append("国策生效：西陲防线得到巩固")
+    if effects.get("grain_safety"):
+        management.finance.monthly_grain += 5
+
+    # ── 河朔效果 ──
     if effects.get("resistance"):
         for key in ("pingyuan", "changshan"):
             region = management.regions.get(key)
             if region:
-                region.support += 3
+                region.support += min(3, effects["resistance"] // 5)
         issue = management.issues.get("frontier_autonomy_debt")
         if issue:
-            issue.tension = max(0, issue.tension - 6)
-        management.finance.cash = max(0, management.finance.cash - (40 if effects["resistance"] == 12 else 60))
-        _advance(progress, "hebei_resistance", effects["resistance"], f"国策《{item['title']}》联络河朔")
-        events.append("国策生效：河北抵抗网络得到联络")
+            issue.tension = max(0, issue.tension - effects["resistance"] // 3)
+        _advance(progress, "hebei_resistance", effects["resistance"], f"国策[{item['title']}]联络河北")
+        events.append("国策生效：河朔抵抗态势改善")
+    if effects.get("support"):
+        state.popular_support = min(100, state.popular_support + effects["support"])
+        for region in management.regions.values():
+            region.support = min(100, region.support + 1)
+    if effects.get("recruit"):
+        army = next(iter(management.armies.values()), None)
+        if army:
+            army.strength += effects["recruit"]
+            army.fit_strength += effects["recruit"]
+    if effects.get("autonomy"):
+        progress.obligations["藩镇自主"] = progress.obligations.get("藩镇自主", 20) + effects["autonomy"]
+
+    # ── 财赋效果 ──
     if effects.get("grain"):
-        management.finance.monthly_grain += 15
-        management.finance.monthly_income += 8
-        management.finance.cash = max(0, management.finance.cash - (70 if effects["grain"] == 14 else 0))
-        if effects["grain"] == 10:
+        if pid == "secure_grain_route":
+            management.finance.monthly_grain += 15
+            management.finance.monthly_income += 8
+            management.finance.cash = max(0, management.finance.cash - 70)
+        elif pid == "relieve_guanzhong":
             management.finance.grain = max(0, management.finance.grain - 80)
-            for region in management.regions.values():
-                region.support += 1
-        _advance(progress, "guanzhong_supply", effects["grain"], f"国策《{item['title']}》维系粮道")
-        events.append("国策生效：关中粮道获得长期加成")
+        _advance(progress, "guanzhong_supply", effects["grain"], f"国策[{item['title']}]维系粮道")
+        events.append("国策生效：粮道得到加强")
+    if effects.get("income"):
+        management.finance.monthly_income += effects["income"]
+    if effects.get("gentry_resistance"):
+        for region in management.regions.values():
+            region.unrest = min(100, region.unrest + 2)
+
     progress.completed_policies.append(item["id"])
-    modifier = {"id": item["id"], "name": item["title"], "description": item["cost"], "effects": item["effects"], "source": "国策", "applied_turn": progress.total_turn}
-    progress.modifiers.append(modifier)
+    progress.modifiers.append({
+        "id": item["id"], "name": item["title"],
+        "description": f"国策[{item['title']}]写入帝国修正", "effects": effects,
+        "source": "国策", "applied_turn": progress.total_turn,
+    })
     events.append(f"帝国修正生效：{item['title']}")
     return events
 

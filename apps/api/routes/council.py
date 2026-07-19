@@ -62,6 +62,43 @@ def register(router_: APIRouter, game) -> None:
         game.store.record_agent_run("人物奏对", config.model if config else "中文模板", round((time.perf_counter() - started) * 1000), model_used, request.scene)
         return {"accepted": True, "scene": request.scene, "character_id": character["id"], "name": character["name"], "identity": character["identity"], "topic": request.topic, "reply": reply, "model_used": model_used}
 
+    @router_.post("/api/audience/stream")
+    def audience_stream(request: AudienceRequest):
+        """流式人物奏对。"""
+        character = next((item for item in CAMPAIGN["characters"] if item["id"] == request.character_id), None)
+        runtime_character = game.management.characters.get(request.character_id)
+        if not character or not runtime_character or runtime_character.status != "active" or character["audience_status"] in {"enemy_only", "future_enemy", "player_character"}:
+            def err(): yield f"data: {json.dumps({'error': '此人当前不能入对'}, ensure_ascii=False)}\n\n"
+            return StreamingResponse(err(), media_type="text/event-stream")
+        scene = SCENE_KEYS.get(request.scene, "court")
+        topic = request.topic.strip() or "当前局势"
+        ctx = {
+            "章节": ACT_NAMES[game.progress.act],
+            "年月": f"{game.progress.year}年{game.progress.month}月",
+            "事项": [asdict(issue) for issue in game.management.issues.values()],
+            **context_for(game.conversation, character["id"]),
+        }
+        from anshi.agents import create_character_agent, run_agent_stream
+        agent = create_character_agent(character, topic, scene)
+        user_prompt = (
+            f"人物：{character['name']}\n"
+            f"身份：{character.get('identity') or character.get('office') or '大唐臣属'}\n"
+            f"公开立场：{character.get('public_stance') or character.get('stance') or '未有定论'}\n"
+            f"场景事实：{json.dumps(ctx, ensure_ascii=False, default=str)}\n"
+            f"所问：{topic}"
+        )
+
+        def generate():
+            full = ""
+            for chunk in run_agent_stream(agent, user_prompt, tag=f"奏对-{character['name']}"):
+                full += chunk
+                yield f"data: {json.dumps({'delta': chunk}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'done': True, 'reply': full}, ensure_ascii=False)}\n\n"
+            record_exchange(game.conversation, character["id"], topic, full, scene, game.progress.total_turn)
+            game.store.save_conversation(game.conversation)
+
+        return StreamingResponse(generate(), media_type="text/event-stream")
+
     @router_.post("/api/council")
     def council(request: CouncilRequest) -> dict:
         selected = [item for item in CAMPAIGN["characters"] if item["id"] in request.character_ids][:6]

@@ -97,6 +97,8 @@ export const api = {
 
   audience: {
     ask: (draft: AudienceRequest) => request<AudienceResponse>("/api/audience", { method: "POST", body: JSON.stringify(draft) }),
+    stream: (draft: AudienceRequest, onEvent: (event: any) => void, signal?: AbortSignal) =>
+      stream<any>("/api/audience/stream", draft, onEvent, signal),
   },
 
   council: {

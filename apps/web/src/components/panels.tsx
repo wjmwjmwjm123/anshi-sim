@@ -109,12 +109,38 @@ export function AudienceDrawer({
   const [topic, setTopic] = React.useState("当前最紧要之事是什么？");
   const [reply, setReply] = React.useState<any>(null);
   const [busy, setBusy] = React.useState(false);
+  const [streaming, setStreaming] = React.useState(false);
   const [scene, setScene] = React.useState(character.audience_status === "remote_only" ? "远奏" : "朝堂");
   const ask = async () => {
     setBusy(true);
-    const response = await api.audience.ask({ character_id: character.id, topic, scene: scene as any });
-    setReply(response);
-    setBusy(false);
+    setReply(null);
+    setStreaming(true);
+    try {
+      await api.audience.stream(
+        { character_id: character.id, topic, scene: scene as any },
+        (event: any) => {
+          if (event.delta) {
+            setReply((prev: any) => {
+              const base = prev?.reply || "";
+              return { accepted: true, reply: base + event.delta };
+            });
+          }
+          if (event.done) {
+            setReply({ accepted: true, reply: event.reply });
+            setStreaming(false);
+          }
+          if (event.error) {
+            setReply({ accepted: false, detail: event.error });
+            setStreaming(false);
+          }
+        },
+      );
+    } catch {
+      // stream ended
+    } finally {
+      setBusy(false);
+      setStreaming(false);
+    }
   };
   const labels: Record<string, string> = {
     military: "统兵", administration: "治政", politics: "权术", diplomacy: "交涉", loyalty: "忠诚", integrity: "操守",
@@ -162,7 +188,7 @@ export function AudienceDrawer({
                 <Portrait character={character} />
                 <p>
                   {reply.accepted ? reply.reply : reply.detail}
-                  <small>{reply.model_used ? "联网人物推演" : "规则与中文模板"}</small>
+                  {streaming && <span className="typing-cursor">▌</span>}
                 </p>
               </div>
             )}

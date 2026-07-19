@@ -6,7 +6,7 @@ import type { Order, Snapshot, Tab } from "./types";
 import { api } from "./api";
 import { CampaignRail, SideNav, TopBar } from "./components/layout";
 import {
-  AudienceDrawer, CouncilModal, DecreeReview, DirectiveDock, EdictComposer,
+  AudienceDrawer, CouncilModal, DecreeReview, EdictComposer,
   EventDecision, MultiModelDrawer,
 } from "./components/panels";
 import {
@@ -256,7 +256,6 @@ export default function App() {
       {councilOpen && <CouncilModal snap={snap} onClose={() => setCouncilOpen(false)} />}
       {modelOpen && <MultiModelDrawer onClose={() => setModelOpen(false)} onSaved={load} />}
 
-      <DirectiveDock snap={snap} onAdd={add} onRemove={remove} onResolve={resolve} busy={busy} />
     </main>
   );
 }

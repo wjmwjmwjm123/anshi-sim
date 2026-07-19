@@ -58,11 +58,14 @@ export function StartScreen({ slots, onNew, onLoad }: { slots: any[]; onNew: () 
 }
 
 export function ImperialCourt({ snap, onAudience }: { snap: Snapshot; onAudience: (character: any) => void }) {
-  const visible = snap.catalog.characters.filter(
+  const [showAll, setShowAll] = React.useState(false);
+  const activeChars = snap.catalog.characters.filter(
     (character: any) =>
       snap.management.characters[character.id]?.status === "active" &&
       !["enemy_only", "future_enemy", "player_character"].includes(character.audience_status),
-  ).slice(0, 18);
+  );
+  const visible = showAll ? activeChars : activeChars.slice(0, 18);
+  const total = activeChars.length;
   const left = visible.filter((character: any, index: number) => (character.court_side ? character.court_side === "left" : index % 2 === 0)
   );
   const right = visible.filter((character: any, index: number) => (character.court_side ? character.court_side === "right" : index % 2 === 1)
@@ -74,23 +77,37 @@ export function ImperialCourt({ snap, onAudience }: { snap: Snapshot; onAudience
   const group = (character: any) =>
     character.institution ||
     (["中书", "门下", "尚书", "吏部", "户部", "礼部", "兵部", "刑部", "工部"].find((name) => character.identity.includes(name)) || "朝臣");
+  const statusCn: Record<string, string> = { active: "在朝", offstage: "未登场", dismissed: "已罢黜", imprisoned: "下狱", exiled: "流放", retired: "致仕", dead: "已故" };
   const rank = (characters: any[], side: string) => (
     <div className={`court-rank ${side}`}>
-      {characters.map((character: any) => (
-        <button key={character.id} onClick={() => onAudience(character)}>
-          <Portrait character={character} />
-          <span>
-            <em>{group(character)}</em>
-            <b>{character.name}</b>
-            <small>{snap.management.characters[character.id]?.office || character.identity}</small>
-          </span>
-        </button>
-      ))}
+      {characters.map((character: any) => {
+        const ch = snap.management.characters[character.id];
+        const st = ch?.status;
+        return (
+          <button key={character.id} onClick={() => onAudience(character)} className={st !== "active" ? "offstage" : ""}>
+            <Portrait character={character} />
+            <span>
+              <em>{group(character)}{st && st !== "active" ? ` · ${statusCn[st] || st}` : ""}</em>
+              <b>{character.name}</b>
+              <small>{ch?.office || character.identity}</small>
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
   return (
     <section className="imperial-court">
-      <SectionHead eyebrow="紫宸殿常朝" title="百官奏对" extra={<span>{visible.length} 人在班</span>} />
+      <SectionHead eyebrow="紫宸殿常朝" title="百官奏对" extra={
+        <span>
+          {total} 人在册
+          {total > 18 && (
+            <button className="toggle-all" onClick={() => setShowAll(!showAll)}>
+              {showAll ? "收起" : "查看全部"}
+            </button>
+          )}
+        </span>
+      } />
       <div className="court-floor">
         {rank(left, "east")}
         <div className="throne-axis">

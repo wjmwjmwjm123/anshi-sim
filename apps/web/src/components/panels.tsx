@@ -250,6 +250,7 @@ export function CouncilModal({ snap, onClose }: { snap: Snapshot; onClose: () =>
   const [rounds, setRounds] = React.useState<any[]>([]);
   const [busy, setBusy] = React.useState(false);
   const [phase, setPhase] = React.useState<"setup" | "done" | "continue" | "emperor">("setup");
+  const [decision, setDecision] = React.useState<any[]>([]);
   const toggle = (id: string) =>
     setSelected((v) => (v.includes(id) ? v.filter((x) => x !== id) : v.length < 6 ? [...v, id] : v));
 
@@ -284,6 +285,8 @@ export function CouncilModal({ snap, onClose }: { snap: Snapshot; onClose: () =>
             });
           } else if (d.type === "minutes") {
             setRounds((prev) => [...prev, { round: d.round, minutes: d.text }]);
+          } else if (d.type === "council_decision") {
+            setDecision(d.options || []);
           } else if (d.type === "emperor_options") {
             setPhase(d.is_final ? "emperor" : "continue");
           }
@@ -372,6 +375,16 @@ export function CouncilModal({ snap, onClose }: { snap: Snapshot; onClose: () =>
           {(phase === "continue" || phase === "emperor") && (
             <div className="emperor-panel">
               <b>{phase === "emperor" ? "陛下圣裁" : "第一轮已毕"}</b>
+              {decision.length > 0 && (
+                <div className="council-decisions">
+                  {decision.map((opt: any, i: number) => (
+                    <button key={i} onClick={() => onClose()}>
+                      <b>{opt.label}</b>
+                      <small>{opt.hint}</small>
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="emperor-actions">
                 {phase === "emperor" && (
                   <button
@@ -384,7 +397,7 @@ export function CouncilModal({ snap, onClose }: { snap: Snapshot; onClose: () =>
                   </button>
                 )}
                 {phase === "emperor" && <button onClick={() => setPhase("done")}>📜 查看总结</button>}
-                <button onClick={onClose}>⚖️ 就此裁决</button>
+                <button onClick={onClose}>⚖️ 退朝</button>
                 <button onClick={() => nextRound("")}>{phase === "emperor" ? "💬 继续廷议" : "⚔️ 进入第二轮"}</button>
               </div>
             </div>

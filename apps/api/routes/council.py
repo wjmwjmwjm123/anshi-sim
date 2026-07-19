@@ -263,10 +263,43 @@ def register(router_: APIRouter, game) -> None:
             minutes, _ = run_agent(sec_agent, sec_prompt, fallback=sec_fallback, with_status=True, tag="中书舍人纪要")
             yield f"data: {json.dumps({'type': 'minutes', 'round': 'final' if is_final else round_no, 'text': minutes}, ensure_ascii=False)}\n\n"
             game.store.save_conversation(game.conversation)
+            # ── 生成廷议结论与决策选项 ──
+            if is_final and len(speeches) >= 2 and minutes:
+                decision_options = _generate_council_decision(request.topic, speeches, minutes)
+                if decision_options:
+                    yield f"data: {json.dumps({'type': 'council_decision', 'options': decision_options}, ensure_ascii=False)}\n\n"
             yield f"data: {json.dumps({'type': 'emperor_options', 'is_final': is_final}, ensure_ascii=False)}\n\n"
             yield f"data: {json.dumps({'done': True}, ensure_ascii=False)}\n\n"
 
         return StreamingResponse(generate(), media_type="text/event-stream")
+
+
+def _generate_council_decision(topic: str, speeches: list[dict], minutes: str) -> list[dict] | None:
+    """基于廷议发言生成2-3个裁决选项供皇帝亲裁。"""
+    cfg = load_config(role="utility")
+    if not cfg:
+        return None
+    speech_text = "\n".join(f"{s['name']}：{s['reply'][:120]}" for s in speeches)
+    messages = [
+        {"role": "system", "content": (
+            "你是唐廷政事堂的值事官。群臣已就一个议题展开廷议，你需提炼2-3个裁决选项供皇帝亲裁。"
+            "输出JSON: {options:[{label:string,hint:string}]}。"
+            "label: ≤12字的裁决方向。hint: ≤30字的方向性后果。"
+            "选项应互斥、覆盖各方主要意见，不偏向任何一方。不要输出解释。"
+        )},
+        {"role": "user", "content": f"议题：{topic}\n\n发言摘要：\n{speech_text}\n\n纪要：{minutes}"},
+    ]
+    try:
+        from anshi.ai import chat_completion, sanitize_json
+        text = chat_completion(messages, cfg, temperature=0.3, tag="廷议裁决生成")
+        parsed = sanitize_json(text)
+        if isinstance(parsed, dict):
+            opts = parsed.get("options", [])
+            return opts if isinstance(opts, list) and len(opts) >= 2 else None
+    except Exception:
+        pass
+    return None
+
 
     @router_.post("/api/secret-edicts")
     def secret_edict(request: SecretEdictRequest) -> dict:
